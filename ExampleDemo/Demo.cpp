@@ -4,7 +4,7 @@
 #include <Swoosh/Renderers/SimpleRenderer.h>
 #include <Segues/ZoomOut.h>
 #include <SFML/Window.hpp>
-#include "Scenes/MainMenuScene.h"
+#include "Scenes/IntroScene.h"
 #include "CustomRenderer.h"
 
 using namespace swoosh;
@@ -19,9 +19,10 @@ int main()
   // 11/23/2022 (NEW BEHAVIOR!)
   // Swoosh now enables custom render pipelines and
   // can switch between them in real-time
-  SimpleRenderer simple(window.getView());
-  CustomRenderer custom(window.getView());
-  RendererEntries renderOptions = { { "simple", simple }, { "custom", custom } };
+  RenderEntries renderOptions;
+  renderOptions
+    .enroll<CustomRenderer>("custom", window.getView())
+    .enroll<SimpleRenderer>("simple", window.getView());
 
     // Create an AC with the current window as our target to draw to
   ActivityController app(window, renderOptions);
@@ -33,6 +34,36 @@ int main()
   app.optimizeForPerformance(quality::realtime); 
   // app.optimizeForPerformance(quality::mobile); // <-- uncomment me!
 
+  // 06/12/2024
+  // The AC needs a renderer in order to draw anything.
+  // This was added to allow programmers to check for platform compatibilities
+  // before commiting to constructing renderers which will require resources.
+  // After the options are build, the programmer can iterate through the list
+  // and check their SystemCompatibilityScores to determine which to use.
+  app.buildRenderEntries();
+
+  std::string errors;
+  if(renderOptions.built() && renderOptions.countValid() > 0) {
+    for(auto& iter : renderOptions.list()) {
+      auto score = iter.getRenderer().checkSystemCompatibility();
+      if(score == SystemCompatibilityScore::sufficient) {
+        app.setRenderer(iter.getIndex());
+        continue;
+      }
+      if (score == SystemCompatibilityScore::build_error) {
+        errors += iter.getError() + "\n";
+      }
+      // For example's sake, we will free insufficient renderers
+      iter.free();
+    }
+  } else {
+    // Running this application without a renderer is pointless.
+    std::cout << "Application cannot render as configured.\n";
+    std::cout << "Errors: " << errors << std::endl;
+    return -1; // Quit
+  }
+
+
   // (DEFAULT BEHAVIOR!)
   // Add the Main Menu Scene as the first and only scene in our stack
   // This is our starting point for the user
@@ -42,7 +73,7 @@ int main()
   // Swoosh now supports generating blank activities from window contents!
   // The segue will copy the window at startup and use it as part of 
   // the screen transition as demonstrated here
-  app.push<segue<ZoomOut>::to<MainMenuScene>>();
+  app.push<segue<ZoomOut>::to<IntroScene>>();
   // app.push<MainMenuScene>(); // uncomment this and comment the line above for old behavior
 
   sf::Texture* cursorTexture = loadTexture(CURSOR_PATH);
@@ -77,12 +108,10 @@ int main()
       else if (event.type == sf::Event::KeyPressed) {
         // Toggle to different renderers using F-keys
         sf::Keyboard::Key code = event.key.code;
-        if (code == sf::Keyboard::F1) {
-          app.setRenderer(0);
+        if (code == sf::Keyboard::F1 && app.setRenderer(0)) {
           window.setTitle("Swoosh Demo (renderer=" + app.getCurrentRendererName() + ")");
         }
-        else if (code == sf::Keyboard::F2) {
-          app.setRenderer(1);
+        else if (code == sf::Keyboard::F2 && app.setRenderer(1)) {
           window.setTitle("Swoosh Demo (renderer=" + app.getCurrentRendererName() + ")");
         }
       }

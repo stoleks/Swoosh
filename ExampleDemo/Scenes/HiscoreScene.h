@@ -165,7 +165,9 @@ public:
         p.sprite = sf::Sprite(*meteorTiny);
       }
 
-      p.pos = sf::Vector2f((float)(rand() % getController().getWindow().getSize().x), (float)(rand() % getController().getWindow().getSize().y));
+      p.pos = sf::Vector2f((float)(rand() % getController().getWindow().getSize().x), 
+        (float)(rand() % getController().getWindow().getSize().y));
+
       p.sprite.setPosition(p.pos);
       p.sprite.setRotation(p.pos.x);
 

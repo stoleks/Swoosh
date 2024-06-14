@@ -1,7 +1,10 @@
 #pragma once
 #include <Swoosh/Events/Events.h>
 #include <SFML/Graphics.hpp>
+#include <assert.h>
+#include <functional>
 #include <list>
+#include <optional>
 #include <type_traits>
 
 using swoosh::events::IDispatcher;
@@ -10,20 +13,54 @@ using swoosh::events::ISubscriber;
 namespace swoosh {
   class IRenderer; /* forward declare */
 
-  /**
-    @class RendererEntry
-    @brief Simple aggregate struct that houses a renderer and its name
-  */
-  struct RendererEntry {
-    const char* name;
-    IRenderer& renderer;
-  };
+  namespace {
+    using CtorFn = std::function<IRenderer*()>;
+    using DtorFn = void (*)(void*);
+
+    namespace detail {
+      template <class T, class Tuple, std::size_t... I>
+      constexpr T* make_from_tuple_impl(Tuple&& t, std::index_sequence<I...>)
+      {
+        return new T(std::get<I>(std::forward<Tuple>(t))...);
+      }
+    }
+
+    template <class T, class Tuple>
+    constexpr T* make_ptr_from_tuple(Tuple&& t)
+    {
+      return detail::make_from_tuple_impl<T>(std::forward<Tuple>(t),
+        std::make_index_sequence<std::tuple_size_v<std::remove_reference_t<Tuple>>>{});
+    }
+  }
 
   /**
-    @class RenderEntries
-    @brief short-hand list of RenderEntry records
+    @class RenderEntry
+    @brief Simple aggregate that houses a renderer and its name
   */
-  using RendererEntries = std::list<RendererEntry>;
+  class RenderEntry {
+  private:
+    const char* name{ nullptr };
+    IRenderer* ptr{ nullptr };
+    size_t idx{};
+    const std::string error;
+    DtorFn deleter;
+  public:
+    RenderEntry(const char* name, IRenderer* ptr, size_t idx, const std::string& error, DtorFn deleter) 
+      : name(name), ptr(ptr), idx(idx), error(error), deleter(deleter) {}
+    ~RenderEntry() { free(); }
+
+   inline const char* getName() const { return name; };
+   inline IRenderer& getRenderer() { return *ptr; }
+   inline size_t getIndex() const { return idx; }
+   inline const bool hasError() const { return error.empty() == false; }
+   inline const std::string& getError() const { return error; };
+
+   void free() {
+     if (!ptr) return;
+     (*deleter)(ptr);
+     ptr = nullptr;
+   }
+  };
 
   /**
     @class RenderSource
@@ -159,6 +196,17 @@ namespace swoosh {
   }
 
   /**
+  @enum SystemCompatibilityScore
+  @brief A ranked enum used by implementations of IRender to inform the user
+  */
+  enum class SystemCompatibilityScore : uint8_t {
+    build_error,      // The renderer could not test because it could not build
+    insufficient,     // This system fails to meet mininum criteria to render
+    unstable,         // This system meets some criteria and might render
+    sufficient        // This system meets the minimum criteria to render
+  };
+
+  /**
     @class IRenderer
     @brief RenderSource event dispatcher used internally by the ActivityController to replace the old draw pipeline
   */
@@ -191,7 +239,6 @@ namespace swoosh {
       IDispatcher::submit(RenderSource(drawable, states));
     }
 
-
     /**
       @brief Implementation defined. The ActivityController draw step invokes this callback.
       @note This function must be used to compose the final texture drawn to the screen.
@@ -217,6 +264,13 @@ namespace swoosh {
     virtual sf::RenderTexture& getRenderTextureTarget() = 0;
 
     /**
+      @brief Allows programmer to implement evaluation of compatibility score.
+      @return SystemCompatibilityScore which is cached for quick fetches.
+      @note use `Renderer::getSystemCompatibilityScore()` to fetch the score.
+    */
+    virtual SystemCompatibilityScore checkSystemCompatibility() const = 0;
+
+    /**
       @brief Prepares the render texture target for displaying on the screen by invoking `display()`
     */
     void display() { getRenderTextureTarget().display(); }
@@ -238,12 +292,13 @@ namespace swoosh {
   class Renderer : public IRenderer, public ISubscriber<RenderSource, Immediate, ClonedSource, Ts...> {
   private:
     std::vector<ClonedSource> clonedMem; //!< Track ClonedSource objects
+    std::optional<SystemCompatibilityScore> cachedScore; // !< Last-ran score
 
     /**
       @brief forwards the broadcasted render event to through the ISubscriber<> implementation
     */
     void broadcast(const char* name, void* src, bool is_base) override {
-      this->redirect(name, src, is_base);
+      redirect(name, src, is_base);
     }
 
     /**
@@ -251,7 +306,7 @@ namespace swoosh {
     */
     void onEvent(const ClonedSource& event) override {
       ClonedSource& ref = clonedMem.emplace_back(std::move(event));
-      this->redirect(ref.name, ref.mem, true);
+      redirect(ref.name, ref.mem, true);
     }
 
     /**
@@ -276,5 +331,84 @@ namespace swoosh {
       @brief deconstructor gaurantees `flushMemory` function is called
     */
     virtual ~Renderer() { flushMemory(); }
+
+    /**
+      @brief Returns the cached score or runs it for the first time and caches.
+      @return SystemCompatibilityScore
+    */
+    SystemCompatibilityScore getSystemCompatibilityScore() {
+      if (cachedScore.has_value()) return *cachedScore;
+      cachedScore.reset(checkSystemCompatibility());
+    }
   };
+
+  /**
+    @class RenderEntries
+    @brief short-hand list of RenderEntry records
+  */
+  class RenderEntries {
+  private:
+    friend class ActivityController;
+    std::list<std::pair<CtorFn, DtorFn>> ctorDtor; // !< Deferred init
+    std::list<RenderEntry> entries; // !< Evaluated render entries
+    std::list<std::string_view> pending; // !< Name of enrolled renderers
+    size_t valid{}; // !< Internal counter for successfully-built renderers
+    bool ready{}; // !< If true, the entries have already been built
+
+    // Builds render entries from enrollment list
+    void buildEntries() {
+      if (ready) return;
+
+      assert(ctorDtor.size() == pending.size()
+        && "Ctors and names are out of sync!");
+
+      auto iter = pending.begin();
+      for (auto& [ctor, dtor] : ctorDtor) {
+        IRenderer* ptr{ nullptr };
+        std::string msg;
+        try {
+          ptr = ctor();
+          ptr->checkSystemCompatibility();
+          valid++;
+        }
+        catch (const std::runtime_error& err) {
+          msg = err.what();
+        }
+        entries.emplace_back(iter->data(), ptr, entries.size(), msg, dtor);
+        iter = std::next(iter);
+      }
+
+      // Entries are built, evaluated, and ready to be used
+      ready = true;
+    }
+  public:
+    // Registers renderers, their ctor arguments, and deffers construction
+    template<typename T, typename... Args>
+    RenderEntries& enroll(const std::string_view& name, Args&&...args) {
+      assert(!ready && "Cannot enroll new renderers after they are built!");
+
+      auto ctor = [t = std::make_tuple(std::forward<decltype(args)>(args)...)]() {
+        return make_ptr_from_tuple<T>(t);
+      };
+
+      static DtorFn dtor = +[](void* data) {
+        delete reinterpret_cast<T*>(data);
+      };
+
+      ctorDtor.push_back({ ctor, dtor });
+
+      pending.emplace_back(name);
+
+      return *this;
+    }
+
+    const bool built() const { return ready; }
+    const size_t count() const { return pending.size(); }
+    const size_t countValid() const { return valid; }
+    const std::list<RenderEntry>& list() const { return entries; }
+
+    // non const
+    std::list<RenderEntry>& list() { return entries; }
+  };
+
 }

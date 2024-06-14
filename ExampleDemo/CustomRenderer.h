@@ -90,7 +90,7 @@ class CustomRenderer : public Renderer<Draw3D, Light> {
   std::list<Light> memLight;
 
 public:
-  CustomRenderer(const sf::View view) {
+  CustomRenderer(const sf::View& view) {
     const unsigned int ux = (unsigned int)view.getSize().x;
     const unsigned int uy = (unsigned int)view.getSize().y;
     const sf::Vector2u size = sf::Vector2u(ux, uy);
@@ -105,6 +105,11 @@ public:
     positionShader.configure(-100, 100, view, &position);
     lightShader.configure(view, &position, &diffuse, &normal, &esm);
     emissiveShader.configure(&diffuse, &esm);
+  }
+
+  SystemCompatibilityScore checkSystemCompatibility() const override {
+    // TODO: show how to grade system specs
+    return SystemCompatibilityScore::sufficient;
   }
 
   void draw() override {

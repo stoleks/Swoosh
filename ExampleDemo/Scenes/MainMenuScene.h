@@ -46,10 +46,11 @@
 #include <SFML/Audio.hpp>
 #include <iostream>
 
-#define GAME_TITLE   "Swoosh Interactive Demo"
-#define PLAY_OPTION  "Play"
-#define SCORE_OPTION "HiScore"
-#define ABOUT_OPTION "About"
+const char* GAME_TITLE = "Swoosh Interactive Demo";
+const char* PLAY_OPTION = "Play";
+const char* SCORE_OPTION = "HiScore";
+const char* ABOUT_OPTION = "About";
+const char* QUIT_OPTION = "Quit";
 
 using namespace swoosh::types;
 
@@ -106,16 +107,20 @@ public:
 
     // Create the buttons
     button menuOption;
-    menuOption.sprite.setTexture(*blueButton);
+    menuOption.sprite.setTexture(*greenButton);
     menuOption.text = PLAY_OPTION;
     buttons.push_back(menuOption);
 
-    menuOption.sprite.setTexture(*redButton);
+    menuOption.sprite.setTexture(*blueButton);
     menuOption.text = SCORE_OPTION;
     buttons.push_back(menuOption);
 
-    menuOption.sprite.setTexture(*greenButton);
+    menuOption.sprite.setTexture(*blueButton);
     menuOption.text = ABOUT_OPTION;
+    buttons.push_back(menuOption);
+
+    menuOption.sprite.setTexture(*redButton);
+    menuOption.text = QUIT_OPTION;
     buttons.push_back(menuOption);
 
     // Load sounds
@@ -146,9 +151,12 @@ public:
       p.pos += sf::Vector2f(p.speed.x * (float)elapsed, p.speed.y * (float)elapsed);
 
       p.sprite.setPosition(p.pos);
-      p.sprite.setScale(2.0f*static_cast<float>(p.life / p.lifetime), 2.0f*static_cast<float>(p.life / p.lifetime));
+      p.sprite.setScale(
+        2.0f*float(p.life / p.lifetime), 
+        2.0f*float(p.life / p.lifetime)
+      );
 
-      auto color = p.sprite.getColor();
+      sf::Color color = p.sprite.getColor();
       color.a = (sf::Uint8)(255.0 * (p.life / p.lifetime));
 
       p.sprite.setColor(color);
@@ -179,20 +187,35 @@ public:
         else if (b.text == SCORE_OPTION) {
           using segue = segue<RadialCCW, sec<2>>;
           using intent = segue::to<HiScoreScene>;
-          getController().push<intent>(savefile).yield([this](Context& context) {
+
+          auto onReturn =
+            [this](Context& context) {
+            // Notice that this callback happens ONLY when we return
+            // _directly_ from the HiScoreScene from this option and not from
+            // the PLAY_OPTION flow.
             if (!context.is<SaveFile>()) return;
             SaveFile& s = context.as<SaveFile>();
 
             std::cout << "Recent hiscore was: " << s.scores.back() << std::endl;
-          });
+            };
+
+          getController()
+            .push<intent>(savefile) // pass savefile into next scene's ctor
+            .yield(onReturn);       // when we return, obtain data passed up
         }
         else if (b.text == ABOUT_OPTION) {
           using segue = segue<PageTurn, sec<2>>;
           using intent = segue::to<AboutScene>;
-          getController().push<intent>().yield([](Context& context) {
-            if (!context.is<std::string>()) return;
-            std::cout << context.as<std::string>();
-          });
+          
+          // retain() stores the context data to forward when this scene also
+          // pops off the stack. The alternative would be to yield(), check,
+          // and store the data manually and pass the data back wherever 
+          // pop() is called. retain() conveniently does this for you.
+          getController().push<intent>().retain();
+        }
+        else if (b.text == QUIT_OPTION) {
+          using intent = segue<ZoomFadeIn>;
+          getController().pop<intent>();
         }
       }
     }
@@ -252,7 +275,9 @@ public:
   }
 
   void onDraw(IRenderer& renderer) override {
-    const bool isCustomRenderer = getController().getCurrentRendererName() == "custom";
+    const bool isCustomRenderer =
+      getController().getCurrentRendererName() == "custom";
+
     renderer.submit(Draw3D(&bg, bgNormal));
 
     for (auto& p : particles) {

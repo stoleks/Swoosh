@@ -11,20 +11,31 @@ namespace swoosh {
 
   /**
   * @class Context
-  * @brief When push intents product data, it lives in Context as the exact type
+  * @brief When push() later produces data via pop(...), it lives in Context.
   */
   class Context {
     friend class Yieldable;
 
+    void (*deleter)(void*) { nullptr };
     void* data{ nullptr };
     std::string typenameStr;
+    Context* adopted{ nullptr };
 
     template<typename T>
     void init(const T& copyable) {
+      static void (*DeletePolicyT)(void*) =
+        +[](void* data) { ((T*)data)->~T(); free(data); };
+
+      deleter = DeletePolicyT;
+
       data = malloc(sizeof(T));
       T* ptr = new (data) T;
       *ptr = copyable;
       typenameStr = typeid(T).name();
+    }
+
+    void adopt(Context&& other) {
+      adopted = new Context(std::move(other));
     }
 
   public:
@@ -44,16 +55,27 @@ namespace swoosh {
     }
 
     ~Context() {
+      // Never initialized, abort early
       if (typenameStr.empty()) return;
-      free(data);
+      
+      // free allocated memory
+      if(deleter) (*deleter)(data);
+
+      // free adopted memory
+      delete adopted;
+      adopted = nullptr;
     }
 
     Context& operator=(Context&& rhs) noexcept {
       std::swap(typenameStr, rhs.typenameStr);
       std::swap(data, rhs.data);
+      std::swap(deleter, rhs.deleter);
+      std::swap(adopted, rhs.adopted);
 
       rhs.typenameStr.clear();
       rhs.data = nullptr;
+      rhs.deleter = nullptr;
+      rhs.adopted = nullptr;
 
       return *this;
     }
@@ -75,6 +97,16 @@ namespace swoosh {
     const bool empty() const {
       return data == nullptr;
     }
+
+    std::optional<Context> previous(size_t skip = 0) {
+      Context* prev = adopted;
+      while (skip-- > 0 && prev) {
+        prev = prev->adopted;
+      }
+
+      if (prev == nullptr) return std::nullopt;
+      return std::make_optional<Context>(std::move(*prev));
+    }
   };
 
   /**
@@ -93,6 +125,7 @@ namespace swoosh {
     }
 
     Context context;
+    bool retained{};
 
     // No special constructor
     Yieldable() = default;
@@ -103,6 +136,10 @@ namespace swoosh {
     // No moves
     Yieldable(Yieldable&&) = delete;
 
+    void share(Yieldable& other) {
+      context.adopt(std::move(other.context));
+    }
+
     void exec() {
       if (!callback) return;
       callback(context);
@@ -111,6 +148,7 @@ namespace swoosh {
     Yieldable& reset() {
       context = Context();
       callback = nullptr;
+      retained = false;
       return *this;
     }
 
@@ -123,6 +161,10 @@ namespace swoosh {
   public:
     void yield(const CallbackFn& fn) {
       callback = fn;
+    }
+
+    void retain() {
+      retained = true;
     }
   };
 

@@ -15,17 +15,19 @@
 #include <SFML/Audio.hpp>
 #include <iostream>
 
-#define TEXT_BLOCK_INFO "Swoosh is an Activity and Segue mini library\n" \
-                        "designed to make complex screen transitions\n" \
-                        "a thing of the past.\n" \
-                        "This is a proof-of-concept demo showcasing\n" \
-                        "its features and includes helpful utilities\n" \
-                        "for your SFML apps or games.\n\n" \
-                        "Fork at\ngithub.com/TheMaverickProgrammer/Swoosh"
+const char* TEXT_BLOCK_INFO = 
+"Swoosh is an Activity and Segue mini library\n" \
+"designed to make complex screen transitions\n" \
+"a thing of the past.\n" \
+"This is a proof-of-concept demo showcasing\n" \
+"its features and includes helpful utilities\n" \
+"for your SFML apps or games.\n\n" \
+"Fork at\ngithub.com/TheMaverickProgrammer/Swoosh";
 
-#define CONTROLS_INFO ">> Left click to shoot\n\n"\
-                      ">> Right click to boost and dodge\n\n" \
-                      ">> Collect stars for extra life\n\n"
+const char* CONTROLS_INFO = 
+">> Left click to shoot\n\n"\
+">> Right click to boost and dodge\n\n" \
+">> Collect stars for extra life\n\n";
 
 using namespace swoosh;
 using namespace swoosh::types;

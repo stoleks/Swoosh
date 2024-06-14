@@ -16,6 +16,10 @@ namespace swoosh {
       surface.create(ux, uy);
     }
 
+    SystemCompatibilityScore checkSystemCompatibility() const override {
+      return SystemCompatibilityScore::sufficient;
+    }
+
     void draw() override {
       /* 
       Intentionally empty because the simple renderer 

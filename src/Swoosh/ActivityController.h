@@ -62,7 +62,7 @@ namespace swoosh
     bool clearBeforeDraw{true};                //!< If true, clears the render target with the Activity's bg color
     mutable IRenderer *renderer{nullptr};      //!< Active renderer to submit draw events to
     std::size_t rendererIdx{0};                //!< Active renderer index
-    const RendererEntries rendererEntries;     //!< All registered renderers
+    RenderEntries& renderEntries;              //!< All registered renderers
 
     //!< Useful for state management and skipping need for dynamic casting
     enum class SegueAction : int
@@ -90,14 +90,12 @@ namespace swoosh
     /**
       @brief constructs the activity controller, sets the virtual window size to the window, and initializes default values
     */
-    ActivityController(sf::RenderWindow &window, const RendererEntries &rendererEntries) : handle(window),
-                                                                                           rendererEntries(rendererEntries)
+    ActivityController(sf::RenderWindow &window, RenderEntries &renderEntries) : handle(window),
+                                                                                           renderEntries(renderEntries)
     {
+      assert(renderEntries.count() > 0 && "ActivityController RenderEntries was empty!");
+
       virtualWindowSize = handle.getSize();
-
-      assert(!rendererEntries.empty() && "ActivityController RenderEntries was empty!");
-      renderer = &rendererEntries.front().renderer;
-
       segueAction = SegueAction::none;
       stackAction = StackAction::none;
       last = nullptr;
@@ -106,14 +104,12 @@ namespace swoosh
     /**
       @brief constructs the activity controller, sets the virtual window size to the user's desired size, and initializes default values
     */
-    ActivityController(sf::RenderWindow &window, sf::Vector2u virtualWindowSize, const RendererEntries &rendererEntries) : handle(window),
-                                                                                                                           rendererEntries(rendererEntries)
+    ActivityController(sf::RenderWindow &window, sf::Vector2u virtualWindowSize, RenderEntries &renderEntries) : handle(window),
+                                                                                                                           renderEntries(renderEntries)
     {
+      assert(renderEntries.count() > 0 && "ActivityController RenderEntries was empty!");
+
       this->virtualWindowSize = virtualWindowSize;
-
-      assert(!rendererEntries.empty() && "ActivityController RenderEntries was empty!");
-      renderer = &rendererEntries.front().renderer;
-
       segueAction = SegueAction::none;
       stackAction = StackAction::none;
 
@@ -166,7 +162,7 @@ namespace swoosh
     */
     const std::size_t getNumOfRenderers() const
     {
-      return rendererEntries.size();
+      return renderEntries.count();
     }
 
     /**
@@ -182,7 +178,7 @@ namespace swoosh
     */
     const std::string getCurrentRendererName() const
     {
-      return std::next(rendererEntries.begin(), rendererIdx)->name;
+      return std::next(renderEntries.list().begin(), rendererIdx)->getName();
     }
 
     /**
@@ -192,13 +188,12 @@ namespace swoosh
     */
     bool setRenderer(std::size_t idx)
     {
-      if (idx < 0 || idx >= getNumOfRenderers())
-        return false;
+      if (auto next = getRenderer(idx); next) {
+        renderer = next;
+        rendererIdx = idx;
+      }
 
-      rendererIdx = idx;
-      renderer = &std::next(rendererEntries.begin(), idx)->renderer;
-
-      return true;
+      return rendererIdx == idx;
     }
 
     /**
@@ -210,7 +205,7 @@ namespace swoosh
       if (idx < 0 || idx >= getNumOfRenderers())
         return nullptr;
 
-      return &std::next(rendererEntries.begin(), idx)->renderer;
+      return std::addressof(std::next(renderEntries.list().begin(), idx)->getRenderer());
     }
 
     /**
@@ -220,16 +215,17 @@ namespace swoosh
     template<typename RendererT>
     RendererT* getRenderer() {
       auto query = [this](RendererEntry& entry) {
-        return typeid(entry.renderer) == typeid(RendererT);
+        return typeid(entry.getRenderer()) == typeid(RendererT);
       };
 
-      auto iter = 
-        std::find_if(rendererEntries.begin(), rendererEntries.end(), query);
+      auto start = rendererEntries.list().begin();
+      auto end = rendererEntries.list().end();
+      auto iter = std::find_if(start, end, query);
 
-      if (iter == rendererEntries.end())
+      if (iter == end)
         return nullptr;
 
-      return &iter->renderer;
+      return iter->getRenderer();
     }
 
     /**
@@ -496,7 +492,7 @@ namespace swoosh
         }
 
         owner.segueAction = SegueAction::push;
-        T segueResolve;
+        T segueResolve{};
 
         yieldable = &segueResolve.delegateActivityPush(owner, std::forward<Args>(args)...)->reset();
       }
@@ -593,7 +589,7 @@ namespace swoosh
         return false;
 
       segueAction = SegueAction::pop;
-      T segueResolve;
+      T segueResolve{};
       segueResolve.delegateActivityPop(*this, std::forward<Args>(args)...);
 
       return true;
@@ -642,7 +638,7 @@ namespace swoosh
         if (owner.segueAction != SegueAction::none) return;
 
         owner.segueAction = SegueAction::rewind;
-        T segueResolve;
+        T segueResolve{};
         rewindSuccessful = segueResolve.delegateActivityRewind(owner, std::forward<Args>(args)...);
       }
     };
@@ -695,6 +691,11 @@ namespace swoosh
           return;
         }
 
+        // User asked that data sent to us moves goes to the next activity
+        if (top->yieldable.retained) {
+          next->yieldable.share(top->yieldable);
+        }
+
         next->yieldable.resolve(std::forward<Args>(args)...);
         next->yieldable.exec();
 
@@ -702,8 +703,7 @@ namespace swoosh
         while (original.size() > 0) {
           Activity* top = original.top();
           top->onEnd();
-
-          delete original.top();
+          delete top;
           original.pop();
         }
 
@@ -818,7 +818,7 @@ namespace swoosh
     */
     void draw()
     {
-      if (activities.size() == 0)
+      if (activities.size() == 0 || renderer == nullptr)
         return;
 
       // Prepare buffer for this pass
@@ -863,6 +863,10 @@ namespace swoosh
         return;
 
       executeClearStackSafely();
+    }
+
+    void buildRenderEntries() {
+      renderEntries.buildEntries();
     }
 
   private:
@@ -926,7 +930,12 @@ namespace swoosh
           activities.pop(); // remove last
         }
         else if (segueAction == SegueAction::pop || segueAction == SegueAction::rewind) {
-          // invokes yield()
+          // User asked that data sent to us moves goes to the next activity
+          if (last->yieldable.retained) {
+            next->yieldable.share(last->yieldable);
+          }
+
+          // invokes callback fn in yield(...)
           next->yieldable.exec();
         }
 
@@ -944,7 +953,7 @@ namespace swoosh
     }
 
     /**
-       @brief When pop() is invoked, the pop is not executed immediately. It is deffered until it is safe to pop the activity off the stack.
+       @brief When pop() is invoked, the pop is not executed immediately. It is defered until it is safe to pop the activity off the stack.
      */
     void executePop()
     {
@@ -956,6 +965,11 @@ namespace swoosh
       activities.pop();
 
       if (activities.size() > 0) {
+        // User asked that data sent to us moves goes to the next activity
+        if (activity->yieldable.retained) {
+          activities.top()->yieldable.share(activity->yieldable);
+        }
+
         // Handle our yeild
         activities.top()->yieldable.exec();
         activities.top()->onResume();
@@ -1029,16 +1043,23 @@ namespace swoosh
         return;
 
       // get the window handle
-      auto &window = getController().getWindow();
+      auto& window = getController().getWindow();
 
       // get all original view and viewport settings
-      auto &view = window.getView();
-      auto viewSize = view.getSize();
-      auto viewportIntRect = window.getViewport(view);
+      auto& view = window.getView();
+      auto& viewSize = view.getSize();
+      auto& viewportIntRect = window.getViewport(view);
 
       // calculate the view based on any viewport adjustments
       // because we will copy the viewport pixels and we don't want those in our re-rendered image
-      sf::View newView = sf::View(sf::FloatRect((float)viewportIntRect.left, (float)viewportIntRect.top, (float)viewportIntRect.width, (float)viewportIntRect.height));
+      sf::View newView = sf::View(
+        sf::FloatRect(
+          (float)viewportIntRect.left, 
+          (float)viewportIntRect.top, 
+          (float)viewportIntRect.width, 
+          (float)viewportIntRect.height
+        )
+      );
 
       // screen size in pixels
       sf::Vector2u windowSize = window.getSize();

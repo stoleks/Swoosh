@@ -213,9 +213,16 @@ public:
       // Some segues can be customized like Checkerboard effect
       using custom = CheckerboardCustom<40, 40>;
       using effect = segue<custom, milli<900>>;
-      getController().push<effect::to<HiScoreScene>>(savefile).yield([this](const Context& context) {
+
+      // NOTE: This will never be called from HiScoreScene because
+      // that screen _rewinds_ back to the title scene.
+      // This code is left here to demonstrate that behavior.
+      // In action, you will never see this function called.
+      auto onReturn = [this](const Context& context) {
         std::cout << "GamePlayScene yield with type: " << context.type() << std::endl;
-      });
+      };
+
+      getController().push<effect::to<HiScoreScene>>(savefile).yield(onReturn);
     }
 
     for (auto& m : meteors) {
@@ -437,9 +444,10 @@ public:
     if(hasShield && killShield)
       hasShield = false;
 
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Num0)) {
-      getController().clearStackSafely();
-    }
+    // Left here as an example on how safe it is to clear the stack anywhere:
+    // if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Num0)) {
+    //   getController().clearStackSafely();
+    // }
   }
 
   void onLeave() override {
