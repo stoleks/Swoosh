@@ -7,7 +7,7 @@
 
 #include <Segues/VerticalSlice.h>
 #include <Swoosh/ActivityController.h>
-#include <Swoosh/Game.h>
+#include <Swoosh/Utils.h>
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
 #include <iostream>

@@ -1,19 +1,36 @@
 ![logo](https://i.imgur.com/tri24Y5.png)
-# Swoosh v1.2.6
-Header-only SFML Activity and Segue Mini Library
+# Swoosh v2.0.0
+Screen Transition Management Library
+Currently only for SFML.
 
 Tested across MSVC, GNU C++, and Clang compilers on Windows, Linux, OSX, and Android operating systems.
 
 [See what else comes with Swoosh](https://github.com/TheMaverickProgrammer/Swoosh/wiki/Namespaces)
 
-> 🚨 Critical changes from v1.2.3+
-> 1. queuePop() and queueRewind() are now just pop() and rewind()
-> 2. optimizeForPerformance(true/false) is changed to optimizeForPerformance(const quality& mode)
-> 3. quality can be { realtime, reduced, mobile } where each is best-to-worst quality but worst-to-best performance depending on your hardware
-> 4. Segues can query the controller's quality set with getRequestedQuality()
-> 5. Added much-needed doxygen style documentation throughout the entire project
-> 6. New [Dream](https://twitter.com/i/status/1315143680903254017) segue effect
-> 7. Fixed some bugs with view toggling between activities
+> 🚨 Critical changes from v1.2.6
+> 1. `swoosh::` shortened to `sw::`
+> 1. `Game.h` renamed to `Utils.h` and drops the `game::` namespace
+> 1. `types::` renamed to `arg::`
+> 1. `types::segue<T, Dur>` alias is now immediately exposed under `sw::` namespace
+> 1. A new way to support multiple methods of rendering for various devices with the same code!
+> 1. All `pop()` variants can now accept _optional_ data to send back to the previous screen!
+>    1. e.g. `template<typename T> pop(const T& data);`
+>    1. All args are perfectly forwarded
+> 1. This is **very** useful for sending contextual information to screens (e.g. _why_ we left the screen)
+>    1. This input data takes **any** type and stores it inside a special `Context` object.
+> 1. All `push()` variants now return a special `PopDataHolder&` type to receive that data sent from `pop(...)`!
+>    1. `void PopDataHolder::take(const std::function<void(Context&)>& callback)`
+>       1. This function registers the callback function to run on `pop()`
+>    1. `void PopDataHolder::adopt()`
+>       1. This function moves the context data from the previous scene to our current scene's context automatically
+> 1. `bool Context::is<T>` - Returns `bool` indicating whether the current Context's stored type is exactly `T`
+> 1. `T& Context::as<T>` - casts the current Context's stored type as `(T*)` and returns the deref result `T&`
+> 1. `std::optional<Context> Context::previous(size_t offset=0)`
+>    1. If the previous context was adopted via `PopDataHolder::adopt()`, then this optional will contain that Context.
+Check with `.has_value()` first!
+>    1. If `offset` is provided, and only if the **exact** same number of subsequent contexts were also adopted, then
+this will return the Context from that many Activities ago
+> 
 > See older changes at the [changelog](https://github.com/TheMaverickProgrammer/Swoosh/wiki/Changelog)
 
 # ✨ Get Jump Started
@@ -32,10 +49,6 @@ Click the gif for the full video!
 
 [![SlideIn Segue](https://media.giphy.com/media/2jsQgGNqmHU3HB3tZN/giphy.gif)](https://streamable.com/qb023)
 
-See the pokemon demo using just Swoosh!
-
-[![clip](https://media.giphy.com/media/1WbJank711TIIMmVr4/giphy.gif)](https://streamable.com/vyfhq)
-
 ---
 
 # § Integrating Swoosh into your SFML app in 2 steps
@@ -44,7 +57,7 @@ See the pokemon demo using just Swoosh!
 ✔️ See [this example](https://github.com/TheMaverickProgrammer/Swoosh/blob/master/ExampleDemo/Demo.cpp) for how you should structure your main loop with the Activty Controller.
 
 ### ⚙️ Inheriting the AC (Activity Controller)
-You can inherit the activity controller to extend and supply more complex data to your applications. For instance, you could extend the AC to know about your TextureResource class or AudioResource class so that each Activity instance has a way to load your game's media.
+You can inherit the activity controller to extend and supply more complex data to your applications. For instance, you could extend the AC to know about your `TextureResource` class or `AudioResource` class so that each Activity instance has a way to load your game's media.
 
 ### 📱 Optimizing for Mobile
 [Skip to this section](https://github.com/TheMaverickProgrammer/Swoosh/blob/master/README.md#-special-topic-mobile-optimization)
@@ -64,27 +77,31 @@ Swoosh addresses these issues by wrapping push and pop calls with templated type
 For example
 
 ```c++
-ActivityController controller;
+sf::RenderWindow window(sf::VideoMode(800, 600), "Swoosh Demo");
+sw::RenderEntries renderOptions; 
+renderOptions.enroll<SimpleRenderer>("simple", window.getView());
+
+// Build our AC with this window and these render options
+sw::ActivityController controller(myWindow, myRenderOptions);
 controller.push<MainMenuScene>();
 
 ...
 
 // User selects settings
-using types::segue;
-controller.push<segue<BlendFadeIn>::to<AppSettingsScene>>();
+controller.push<sw::segue<BlendFadeIn>::to<AppSettingsScene>>();
 ```
 
-The syntax is human-readable and flows naturally. Swoosh hides the intricacies from the user so they can focus on what's really important: Writing the application!
+The syntax is human-readable and flows naturally. Swoosh hides the intricacies from the user so they can focus on what's really important: **Writing the app!**
 
 ### ⏰ Changing Time
 The `Segue` class takes in two arguments: The next activity type, and the duration for the transition to last. By default the transition is set to 1 second. 
-This may be too fast or too slow for your needs. The `DurationType` class takes a templated wrapper for SFML time functions. They are found in the `swoosh::types` namespace.
+This may be too fast or too slow for your needs. The `DurationType` class takes a templated wrapper for SFML time functions. They are found in the `sw::arg` namespace.
 
 For example
 
 ```c++
-using namespace swoosh::types;
-controller.push<segue<Cube3D<direction::left>, seconds<5>>::to<DramaticIntroScene>>();
+using namespace sw; // for segue and arg:: namespace
+controller.push<segue<Cube3D<arg::direction::left>, arg::seconds<5>>::to<DramaticIntroScene>>();
 ```
 
 ### 🔍 Writing Clearer Code
@@ -94,8 +111,15 @@ Although Swoosh is doing a ton behind the scenes for us, we lost clarity.
 We can clean up the code by creating our own typename aliases. Later, modifying your screen transition effect is as easy as changing one line.
 
 ```c++
-using effect = segue<Cube3D<direction::up>, sec<2>>;
-getController().push<effect::to<DramaticIntroScene>>();
+using namespace sw;
+
+// fx is short for "effects"
+using fx = segue<Cube3D<arg::direction::up>, arg::sec<2>>;
+
+// tx is short for "transition"
+using tx = fx::to<DramaticIntroScene>;
+
+getController().push<tx>();
 ```
 
 Much more elegant!
@@ -113,23 +137,29 @@ controller.push<SuperJumpManLevel1>({info.getLives(), info.getCoins(), info.getM
 This is the same for segues
 
 ```c++
+using namespace sw;
+
 ActivityController& controller = getController();
 LobbyInfo data = queryLobbyServer().get(); // blocking future request
 
-using effect  = segue<CheckerboardEffect, sec<3>>;
+using fx = segue<CheckerboardEffect, arg::sec<3>>;
+using tx = fx::to<MatchMakingLobby>;
 
 // Go!
-controller.push<effect::to<MatchMakingLobby>>(data);
+controller.push<tx>(data);
 ```
 
 # § Actions & Leaving Activities
-The `ActivityController` class can _push_ and _pop_ states but only when it's safe to do so. It does not pop in the middle of a cycle and does not push when in the middle of a segue.
+The `sw::ActivityController` class can _push_ and _pop_ states but only when it's safe to do so. It does not pop in the middle of a cycle and does not push when in the middle of a segue.
 Make sure your activity controller calls are in an Activity's `onUpdate(double elapsed)` function to avoid having _push_ or _pop_ intents discarded.
 
 ### Push
-```c++
+```cpp
+sw::ActivityController controller(myWindow, myRenderOptions);
 controller.push<MyScene>();
-controller.push<segue<FadeIn>::to<MyScene>>();
+
+// This transition is short enough to spell out
+controller.push<sw::segue<FadeIn>::to<MyScene>>();
 ```
 
 ### Pop
@@ -137,7 +167,7 @@ Pushed activities are added to the stack immediately. However there are steps in
 
 ```
 controller.pop(); 
-controller.pop<segue<BlurFadeIn>>();
+controller.pop<sw::segue<BlurFadeIn>>();
 ```
 
 ### Rewinding 
@@ -150,10 +180,10 @@ This is useful to simulate persistent behavior such as in a top-down adventure g
 The syntax is close to _push_ except if it succeeds, activities are ended and discarded.
 
 ```c++
-using effect = segue<BlackWashFadeIn>;
-using action = effect::to<LOZOverworld>;
+using fx = sw::segue<BlackWashFadeIn>;
+using tx = fx::to<LOZOverworld>;
 
-bool found = controller.rewind<action>();
+bool found = controller.rewind<tx>();
 
 if(!found) {
     // Perhaps we're already in overworld. Certain teleport items cannot be used!
@@ -197,7 +227,7 @@ This fact inspired Swoosh to be dependant on a timer. When the timer is up the S
 added on top of the stack. The time elapsed and total time alloted can be retrieved in the class body to make some cool effects
 from start to finish.
 
-The class for Segues depends only on one overloaded function `void OnDraw(sf::RenderTexture& surface)`.
+The class for Segues depends only on one overloaded function `void onDraw(IRenderer& renderer)`.
 The constructor must take in the duration, the last activity, and the next activity.
 
 ```c++
@@ -223,10 +253,10 @@ _getVirtualWindowSize()_ is useful when wanting to keep your graphics consistent
 ### Drawing To The Screen
 Segues are made up of two Activities: the last and the next. For most segues you need to draw one and then the other with some applied effect.
 
-* `drawNextActivity(sf::RenderTexture& surface);` 
-* `drawLastActivity(sf::RenderTexture& surface);`
+* `drawNextActivity(IRenderer& renderer);` 
+* `drawLastActivity(IRenderer& renderer);`
 
-Both draw their respective activity's contents to a sf::RenderTexture that can be used later. Read on below for an example.
+Both draw their respective activity's contents with the active renderer that can be used later. Read on below for an example.
 
 [This example](https://github.com/TheMaverickProgrammer/Swoosh/blob/master/src/Segues/PushIn.h) Segue will slide a new screen in while pushing the last scene out. Really cool!
 
@@ -274,7 +304,7 @@ By providing alternative segue effect behavior for the quality modes, you can en
 If you have a particular structure how your game should end (like a GameOverScreen), it would make sense to have that screen be at the bottom of the stack at ALL times. We can start the player in the main menu and let them make other choices to config their controllers. If the player presses start, we can pop the main menu off the stack and begin the game. With this structure in mind, we might have something like the following:
 
 ```cpp
-ActivityController ac(window);
+sw::ActivityController ac(window);
 ac.push<GameOverScreen>();
 ac.push<GameWorld>();
 ac.push<MainMenuScreen>();

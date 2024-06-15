@@ -1,7 +1,7 @@
 #pragma once
 #include <Swoosh/Segue.h>
 #include <Swoosh/Ease.h>
-#include <Swoosh/Game.h>
+#include <Swoosh/Utils.h>
 #include <Swoosh/EmbedGLSL.h>
 #include <Swoosh/Shaders.h>
 
