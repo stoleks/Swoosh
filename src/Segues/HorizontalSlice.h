@@ -3,7 +3,7 @@
 #include <Swoosh/Game.h>
 #include <Swoosh/Ease.h>
 
-using namespace swoosh;
+using namespace sw;
 
 /**
   @class HorizontalSlice

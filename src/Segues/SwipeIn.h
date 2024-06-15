@@ -3,7 +3,7 @@
 #include <Swoosh/Game.h>
 #include <Swoosh/Ease.h>
 
-using namespace swoosh;
+using namespace sw;
 
 
 /**
@@ -13,7 +13,7 @@ using namespace swoosh;
   Behavior is the same across all quality modes
 */
 
-template<types::direction direction>
+template<arg::direction direction>
 class SwipeIn : public Segue {
 private:
   sf::Vector2u windowSize;
@@ -46,7 +46,7 @@ public:
     int d = 0;
 
     // left
-    if (direction == types::direction::left) {
+    if (direction == direction::left) {
       r = bottom.getTexture()->getSize().x;
       l = (int)(r - (alpha * (double)r));
       u = 0;
@@ -57,7 +57,7 @@ public:
     }
 
     // right
-    if (direction == types::direction::right) {
+    if (direction == direction::right) {
       r = (int)((double)bottom.getTexture()->getSize().x * alpha);
       l = 0;
       u = 0;
@@ -65,7 +65,7 @@ public:
     }
 
     // up
-    if (direction == types::direction::up) {
+    if (direction == direction::up) {
       r = bottom.getTexture()->getSize().x;
       l = 0;
       d = bottom.getTexture()->getSize().y;
@@ -75,7 +75,7 @@ public:
     }
 
     // down 
-    if (direction == types::direction::down) {
+    if (direction == direction::down) {
       r = bottom.getTexture()->getSize().x;
       l = 0;
       u = 0;

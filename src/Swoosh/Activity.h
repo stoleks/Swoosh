@@ -3,18 +3,18 @@
 #include <SFML/Graphics.hpp>
 #include <functional>
 
-namespace swoosh {
+namespace sw {
   class ActivityController; /* forward decl */
 
     // Forward decl.
-  class PopResult;
+  class PopDataHolder;
 
   /**
   * @class Context
   * @brief When push() later produces data via pop(...), it lives in Context.
   */
   class Context {
-    friend class PopResult;
+    friend class PopDataHolder;
 
     void (*deleter)(void*) { nullptr };
     void* data{ nullptr };
@@ -110,34 +110,36 @@ namespace swoosh {
   };
 
   /**
-  * @class PopResult
+  * @class PopDataHolder
   * @brief A construct to handle data from popped activities
   */
-  class PopResult {
+  class PopDataHolder {
     friend class ActivityController;
     friend class Activity;
 
     using CallbackFn = std::function<void(Context&)>;
     CallbackFn callback;
 
-    static PopResult& dummy() {
-      static PopResult _; return _;
+    static PopDataHolder& dummy() {
+      static PopDataHolder _; return _;
     }
 
     Context context;
     bool adopted{};
 
     // Default constructor
-    PopResult() = default;
+    PopDataHolder() = default;
 
     // No copies
-    PopResult(const PopResult&) = delete;
+    PopDataHolder(const PopDataHolder&) = delete;
 
     // No moves
-    PopResult(PopResult&&) = delete;
+    PopDataHolder(PopDataHolder&&) = delete;
 
-    void give(PopResult& dest) {
-      context.adopt(std::move(dest.context));
+    // Carry over context data from another PopDataHolder
+    // Our context will adopt the data (own)
+    void carry(PopDataHolder& from) {
+      context.adopt(std::move(from.context));
     }
 
     void exec() {
@@ -145,7 +147,7 @@ namespace swoosh {
       callback(context);
     }
 
-    PopResult& reset() {
+    PopDataHolder& reset() {
       context = Context();
       callback = nullptr;
       adopted = false;
@@ -153,7 +155,7 @@ namespace swoosh {
     }
 
     template<typename... Args>
-    PopResult& resolve(Args&&... args) {
+    PopDataHolder& resolve(Args&&... args) {
       context = Context(std::forward<Args>(args)...);
       return *this;
     }
@@ -192,7 +194,7 @@ namespace swoosh {
 
   private:
     bool started{}; //!< Flag denotes if an activity should call onStart() or onResume()
-    PopResult popResult; //!< Callback handle when returning
+    PopDataHolder popDataHolder; //!< Callback handle when returning
 
   protected:
     ActivityController* controller{ nullptr }; //!< Pointer to the activity controller
@@ -217,11 +219,11 @@ namespace swoosh {
     virtual void onDraw(IRenderer& renderer) = 0;
     virtual ~Activity() { }
     void setView(const sf::View& view) { this->view = view; }
-    void setView(const sf::Vector2u& size) { this->view = sf::View(sf::FloatRect(0.0f, 0.0f, (float)size.x, (float)size.y)); }
-    void setView(const sf::FloatRect& rect) { this->view = sf::View(rect); }
-    void setBGColor(const sf::Color color) { this->bgColor = color;  }
-    const sf::View getView() const { return this->view; }
-    const sf::Color getBGColor() const { return this->bgColor; }
+    void setView(const sf::Vector2u& size) { view = sf::View(sf::FloatRect(0.0f, 0.0f, (float)size.x, (float)size.y)); }
+    void setView(const sf::FloatRect& rect) { view = sf::View(rect); }
+    void setBGColor(const sf::Color color) { bgColor = color;  }
+    const sf::View getView() const { return view; }
+    const sf::Color getBGColor() const { return bgColor; }
     ActivityController& getController() { return *controller; }
   };
 }

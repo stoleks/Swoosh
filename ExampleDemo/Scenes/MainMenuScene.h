@@ -52,9 +52,7 @@ const char* SCORE_OPTION = "HiScore";
 const char* ABOUT_OPTION = "About";
 const char* QUIT_OPTION = "Quit";
 
-using namespace swoosh::types;
-
-class MainMenuScene : public Activity {
+class MainMenuScene : public sw::Activity {
 private:
   sf::Texture* bgTexture, *bgNormal;
   sf::Texture* starTexture;
@@ -76,11 +74,11 @@ private:
   bool inFocus;
   bool fadeMusic;
 
-  Timer timer; // for onscreen effects. Or we could have stored the total elapsed from the update function
+  sw::Timer timer; // for onscreen effects. Or we could have stored the total elapsed from the update function
   SaveFile savefile;
 
 public:
-  MainMenuScene(ActivityController& controller) : Activity(&controller) {
+  MainMenuScene(sw::ActivityController& controller) : Activity(&controller) {
     setView(controller.getVirtualWindowSize());
 
     savefile.loadFromFile(SAVE_FILE_PATH);
@@ -178,18 +176,18 @@ public:
         selectFX.play();
 
         if (b.text == PLAY_OPTION) {
-          using segue = segue<HorizontalOpen>;
-          using intent = segue::to<GameplayScene>;
-          getController().push<intent>(savefile);
+          using segue = sw::segue<HorizontalOpen>;
+          using tx = segue::to<GameplayScene>;
+          getController().push<tx>(savefile);
 
           fadeMusic = true;
         }
         else if (b.text == SCORE_OPTION) {
-          using segue = segue<RadialCCW, sec<2>>;
-          using intent = segue::to<HiScoreScene>;
+          using segue = segue<RadialCCW, arg::sec<2>>;
+          using tx = segue::to<HiScoreScene>;
 
           auto onReturn =
-            [this](Context& context) {
+            [this](sw::Context& context) {
             // Notice that this callback happens ONLY when we return
             // _directly_ from the HiScoreScene from this option and not from
             // the PLAY_OPTION flow.
@@ -200,23 +198,23 @@ public:
             };
 
           getController()
-            .push<intent>(savefile) // pass savefile into next scene's ctor
+            .push<tx>(savefile) // pass savefile into next scene's ctor
             .take(onReturn);        // when we return, obtain data passed up
         }
         else if (b.text == ABOUT_OPTION) {
-          using segue = segue<PageTurn, sec<2>>;
-          using intent = segue::to<AboutScene>;
+          using segue = segue<PageTurn, arg::sec<2>>;
+          using tx = segue::to<AboutScene>;
           
           // adopt() stores the context data to forward when this scene also
           // pops off the stack. The alternative would be to take(Context&),
           // then check, somehow store the data manually, and finally pass
           // this data back wherever pop() is called. 
           // adopt() conveniently does this for you.
-          getController().push<intent>().adopt();
+          getController().push<tx>().adopt();
         }
         else if (b.text == QUIT_OPTION) {
-          using intent = segue<ZoomFadeIn>;
-          getController().pop<intent>();
+          using tx = segue<ZoomFadeIn>;
+          getController().pop<tx>();
         }
       }
     }
@@ -269,13 +267,13 @@ public:
       p.life = 3.0;
       p.lifetime = 3.0;
       p.sprite.setPosition(p.pos);
-      setOrigin(p.sprite, 0.5, 0.5);
+      sw::setOrigin(p.sprite, 0.5, 0.5);
 
       particles.push_back(p);
     }
   }
 
-  void onDraw(IRenderer& renderer) override {
+  void onDraw(sw::IRenderer& renderer) override {
     const bool isCustomRenderer =
       getController().getCurrentRendererName() == "custom";
 
@@ -294,7 +292,7 @@ public:
 
     // First set the text as the it would render as a full string
     menuText.setString(GAME_TITLE);
-    setOrigin(menuText, 0.5, 0.5);
+    sw::setOrigin(menuText, 0.5, 0.5);
 
     // -30 is a made up number offset to help it look right
     menuText.setPosition(sf::Vector2f(screenMid-30.f, 100));
@@ -305,12 +303,12 @@ public:
 
     // For each letter in the string, make it jump while preserving placement
     size_t len = strlen(GAME_TITLE);
-    double frequency = swoosh::ease::pi * 2.0 / len;
+    double frequency = sw::ease::pi * 2.0 / len;
     double dt = timer.getElapsed().asSeconds();
     for (int i = 0; i < len; i++) {
       menuText.setFillColor(sf::Color::White);
       menuText.setString(GAME_TITLE[i]);
-      setOrigin(menuText, 0.5, 0.5); // origin is in the center of the letter
+      sw::setOrigin(menuText, 0.5, 0.5); // origin is in the center of the letter
 
       // This creates our wave over all letters
       double ratio = (ease::pi) / len;
@@ -330,7 +328,7 @@ public:
       if (menuText.getString() == ' ') { offset += menuText.getCharacterSize(); }
 
       menuText.setPosition(sf::Vector2f((float)(startX + offset), (float)startY));
-      renderer.submit(Clone(menuText));
+      renderer.submit(sw::Clone(menuText));
 
       if (isCustomRenderer) {
 

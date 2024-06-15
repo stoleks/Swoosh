@@ -3,7 +3,7 @@
 #include <Swoosh/Activity.h>
 #include <SFML/Graphics.hpp>
 
-namespace swoosh {
+namespace sw {
   class ActivityController;
 
   /**
@@ -27,7 +27,7 @@ namespace swoosh {
    * This rigid design is intentional to influence plug-and-play segues. This way custom content can be shared and it "just works"
    */
   class Segue : public Activity {
-    friend class ActivityController;
+    friend class sw::ActivityController;
 
   private:
     Activity* last{ nullptr };
@@ -47,20 +47,20 @@ namespace swoosh {
 
     void drawLastActivity(IRenderer& renderer) {
       if (last) {
-        (this->getController().*setActivityViewFunc)(renderer, last);
+        (getController().*setActivityViewFunc)(renderer, last);
         renderer.clear(last->getBGColor());
         last->onDraw(renderer);
         renderer.draw();
-        (this->getController().*resetViewFunc)(renderer);
+        (getController().*resetViewFunc)(renderer);
       }
     }
 
     void drawNextActivity(IRenderer& renderer) {
-      (this->getController().*setActivityViewFunc)(renderer, next);
+      (getController().*setActivityViewFunc)(renderer, next);
       renderer.clear(next->getBGColor());
       next->onDraw(renderer);
       renderer.draw();
-      (this->getController().*resetViewFunc)(renderer);
+      (getController().*resetViewFunc)(renderer);
     }
 
   public:
@@ -81,8 +81,14 @@ namespace swoosh {
     void onEnd() override final { last->onExit(); }
 
     Segue() = delete;
-    Segue(sf::Time duration, Activity* last, Activity* next) 
-      : setActivityViewFunc(nullptr), resetViewFunc(nullptr), duration(duration), last(last), next(next), Activity(&next->getController()) { /* ... */ }
+    Segue(sf::Time duration, Activity* last, Activity* next) : 
+      setActivityViewFunc(nullptr), 
+      resetViewFunc(nullptr),
+      duration(duration), 
+      last(last), 
+      next(next), 
+      Activity(&next->getController()) { /* ... */ }
+
     virtual ~Segue() { }
   };
 }

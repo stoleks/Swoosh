@@ -3,7 +3,7 @@
 #include <Swoosh/Ease.h>
 #include <Swoosh/EmbedGLSL.h>
 
-using namespace swoosh;
+using namespace sw;
 
 /**
   @class ZoomFadeIn

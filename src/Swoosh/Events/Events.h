@@ -7,7 +7,7 @@
 // Event dispatcher interfaces introduced in Swoosh v2.0.0
 //
 
-namespace swoosh {
+namespace sw {
   namespace events {
     /**
       @class IDispatcher<E>

@@ -7,12 +7,13 @@
 #include <optional>
 #include <type_traits>
 
-using swoosh::events::IDispatcher;
-using swoosh::events::ISubscriber;
+using sw::events::IDispatcher;
+using sw::events::ISubscriber;
 
-namespace swoosh {
+namespace sw {
   class IRenderer; /* forward declare */
 
+  // anonymous namespace helper util structs
   namespace {
     using CtorFn = std::function<IRenderer*()>;
     using DtorFn = void (*)(void*);
@@ -79,6 +80,7 @@ namespace swoosh {
     */
     explicit RenderSource(const sf::Drawable* src, const sf::RenderStates& states = sf::RenderStates())
       : dptr(src), statesIn(states) {}
+
     virtual ~RenderSource() {}
 
     /**
@@ -102,7 +104,8 @@ namespace swoosh {
       @brief constructs an Immediate render event type
       @example renderer.submit(Immediate(&sprite, states));
     */
-    Immediate(const sf::Drawable* src, const sf::RenderStates& states = sf::RenderStates()) : RenderSource(src, states) {}
+    Immediate(const sf::Drawable* src, const sf::RenderStates& states = sf::RenderStates()) 
+      : RenderSource(src, states) {}
   };
 
   // internal utility structs
@@ -225,7 +228,8 @@ namespace swoosh {
       @brief Submits a custom render event
       @param event A custom event object to be handled by the renderer
     */
-    template<typename Event, typename use = std::enable_if_t<(is_render_event_v<Event> || !is_sfml_primitive_v<Event>)>>
+    template<typename Event, typename use = 
+      std::enable_if_t<(is_render_event_v<Event> || !is_sfml_primitive_v<Event>)>>
     void submit(const Event& event) {
       IDispatcher::submit(event);
     }
@@ -276,8 +280,9 @@ namespace swoosh {
     void display() { getRenderTextureTarget().display(); }
 
     /**
-     * @brief Creates a texture copy of the current renderer's output for the scene. Useful for displaying or doing post-processing effects.
-     * @return sf::Texture
+      @brief Creates a texture copy of the current renderer's output for the scene. 
+        Useful for displaying or doing post-processing effects.
+      @return sf::Texture
     */
     sf::Texture getTexture() { return getRenderTextureTarget().getTexture(); }
   };
@@ -310,7 +315,8 @@ namespace swoosh {
     }
 
     /**
-    @brief Built-in event handler for immediate render events that draw directly to the assigned render target at the time of call
+    @brief Built-in event handler for immediate render events that draw directly to the 
+      assigned render target at the time of call
     */
     void onEvent(const Immediate& event) override {
       getRenderTextureTarget().draw(*event.drawable(), event.states());

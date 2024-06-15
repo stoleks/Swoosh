@@ -9,8 +9,8 @@
   @class Draw3D
   @brief A render event with material data that can render 2D graphics as psuedo-3D
 */
-struct Draw3D : RenderSource {
-  glsl::deferred::MeshData data; // !< aggregate data for the 2D model
+struct Draw3D : sw::RenderSource {
+  sw::glsl::deferred::MeshData data; // !< aggregate data for the 2D model
 
   explicit Draw3D(sf::Sprite* spr, 
     sf::Texture* normal, 
@@ -32,7 +32,7 @@ struct Draw3D : RenderSource {
   @brief A render event with lighting data for rendering lights
   If used in a SimpleRenderer, will draw the light as a circle
 */
-struct Light : RenderSource {
+struct Light : sw::RenderSource {
   float radius{};
   sf::Vector3f position{};
   sf::Color color{ sf::Color::White };
@@ -79,13 +79,13 @@ sf::Vector3f WithZ(const sf::Vector2f xy, float z) {
   Uses `Light` render event as a tag to calculate the final lighting in the scene
   The end result is a partial implementation of a deferred renderer commonly used in advanced 3D applications
 */
-class CustomRenderer : public Renderer<Draw3D, Light> {
+class CustomRenderer : public sw::Renderer<Draw3D, Light> {
   sf::RenderTexture position, diffuse, normal, esm, out;
   glsl::deferred::PositionPass positionShader;
   glsl::deferred::LightPass lightShader;
   glsl::deferred::EmissivePass emissiveShader;
   glsl::deferred::MeshPass meshShader;
-  std::list<RenderSource> memForward;
+  std::list<sw::RenderSource> memForward;
   std::list<Draw3D> mem3D;
   std::list<Light> memLight;
 
@@ -107,9 +107,9 @@ public:
     emissiveShader.configure(&diffuse, &esm);
   }
 
-  SystemCompatibilityScore checkSystemCompatibility() const override {
+  sw::SystemCompatibilityScore checkSystemCompatibility() const override {
     // TODO: show how to grade system specs
-    return SystemCompatibilityScore::sufficient;
+    return sw::SystemCompatibilityScore::sufficient;
   }
 
   void draw() override {
@@ -145,7 +145,7 @@ public:
     emissiveShader.apply(*this);
 
     // draw forward rendered content
-    for (RenderSource& source : memForward) {
+    for (sw::RenderSource& source : memForward) {
       out.draw(*source.drawable());
     }
 
@@ -176,7 +176,7 @@ public:
     return out;
   }
 
-  void onEvent(const RenderSource& event) override {
+  void onEvent(const sw::RenderSource& event) override {
     memForward.push_back(event);
   }
 

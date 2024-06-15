@@ -5,7 +5,7 @@
 #include <Swoosh/EmbedGLSL.h>
 #include <Swoosh/Shaders.h>
 
-using namespace swoosh;
+using namespace sw;
 
 /**
   @class PageTurn

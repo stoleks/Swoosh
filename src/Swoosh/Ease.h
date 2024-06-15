@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace swoosh {
+namespace sw {
   namespace ease {
     static double pi = 3.14159265358979323846; //!< Precalculated pi
 

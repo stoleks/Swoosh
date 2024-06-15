@@ -14,13 +14,9 @@
 #include <Segues/RetroBlit.h>
 #include <iostream>
 
-using namespace swoosh;
-using namespace swoosh::types;
-using namespace swoosh::game;
-
 class MainMenuScene;
 
-class HiScoreScene : public Activity {
+class HiScoreScene : public sw::Activity {
 private:
   sf::Texture * meteorBig, * meteorMed, * meteorSmall, * meteorTiny, * btn;
 
@@ -37,14 +33,14 @@ private:
   float screenMid;
   float screenBottom;
 
-  Timer waitTime;
+  sw::Timer waitTime;
   double scrollOffset;
 
   bool inFocus;
 public:
   SaveFile& saveFile;
 
-  HiScoreScene(ActivityController& controller, SaveFile& save) : saveFile(save), Activity(&controller) {
+  HiScoreScene(sw::ActivityController& controller, SaveFile& save) : saveFile(save), Activity(&controller) {
     // Proof that this is the same save file in memory as it is passed around the scenes
     std::cout << "savefile address is " << &save << std::endl;
 
@@ -99,8 +95,8 @@ public:
       selectFX.play();
 
       // Rewind lets us pop back to a particular scene in our stack history
-      using effect = segue<CircleClose, sec<1>>;
-      bool found = getController().rewind<effect::to<MainMenuScene>>(saveFile);
+      using tx = segue<CircleClose, arg::sec<1>>;
+      bool found = getController().rewind<tx::to<MainMenuScene>>(saveFile);
 
       // should never happen
       // but your games may need to check so here it is an example
@@ -179,7 +175,7 @@ public:
   void onResume() override {
   }
 
-  void onDraw(IRenderer& renderer) override {
+  void onDraw(sw::IRenderer& renderer) override {
     sf::RenderWindow& window = getController().getWindow();
 
     for (auto& m : meteors) {
@@ -189,8 +185,8 @@ public:
     text.setFillColor(sf::Color::Yellow);
     text.setPosition(sf::Vector2f(screenMid, 100));
     text.setString("Hi Scores");
-    setOrigin(text, 0.5, 0.5);
-    renderer.submit(Immediate(&text));
+    sw::setOrigin(text, 0.5, 0.5);
+    renderer.submit(sw::Immediate(&text));
 
     text.setFillColor(sf::Color::White);
 
@@ -200,13 +196,13 @@ public:
 
       text.setString(name);
       text.setPosition(sf::Vector2f((float)(screenDiv), (float)(200 + (i*100) - scrollOffset)));
-      setOrigin(text, 0.5, 0.5);
-      renderer.submit(Immediate(&text));
+      sw::setOrigin(text, 0.5, 0.5);
+      renderer.submit(sw::Immediate(&text));
 
       text.setString(std::to_string(score));
       text.setPosition(sf::Vector2f((float)(screenDiv * 3), (float)(200 + (i*100) - scrollOffset)));
-      setOrigin(text, 0.5, 0.5);
-      renderer.submit(Immediate(&text));
+      sw::setOrigin(text, 0.5, 0.5);
+      renderer.submit(sw::Immediate(&text));
     }
 
     text.setFillColor(sf::Color::Black);

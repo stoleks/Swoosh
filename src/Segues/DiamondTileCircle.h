@@ -4,7 +4,7 @@
 #include <Swoosh/Segue.h>
 #include <Swoosh/Ease.h>
 
-using namespace swoosh;
+using namespace sw;
 
 /**
   @class DiamondTileCircle

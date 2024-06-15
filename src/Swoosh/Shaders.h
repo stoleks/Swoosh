@@ -12,7 +12,7 @@ that can be re-used elsewhere by Swoosh devs
 Custom made or custom implemented by TheMaverickProgrammer 
 */
 
-namespace swoosh {
+namespace sw {
   namespace glsl {
     
     /**
@@ -579,8 +579,8 @@ namespace swoosh {
         }
 
         destination[0].color = sf::Color::Blue;
-        destination[(((cols - 1) * (rows)) * 6) + 5].color = sf::Color::Green;
-        destination[total - 1].color = sf::Color::Red;
+        destination[(((static_cast<size_t>(cols) - 1) * (rows)) * 6) + 5].color = sf::Color::Green;
+        destination[static_cast<size_t>(total) - 1].color = sf::Color::Red;
       }
 
     public:

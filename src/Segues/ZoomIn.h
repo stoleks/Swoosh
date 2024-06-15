@@ -3,7 +3,7 @@
 #include <Swoosh/Game.h>
 #include <Swoosh/Ease.h>
 
-using namespace swoosh;
+using namespace sw;
 
 /**
   @class ZoomIn
@@ -38,7 +38,7 @@ public:
     }
 
     sf::Sprite left(temp); 
-    game::setOrigin(left, 0.5f, 0.5f);
+    sw::setOrigin(left, 0.5f, 0.5f);
     left.setPosition((float)(windowSize.x/2.0f), (float)(windowSize.y/2.0f));
     left.setScale((float)alpha, (float)alpha);
 

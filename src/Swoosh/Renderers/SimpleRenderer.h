@@ -1,7 +1,7 @@
 #pragma once
 #include <Swoosh/Renderers/Renderer.h>
 
-namespace swoosh {
+namespace sw {
   /**
   @class SimpleRenderer
   @brief A composite renderer that comes with Swooshlib

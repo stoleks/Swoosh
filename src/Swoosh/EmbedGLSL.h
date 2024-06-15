@@ -24,7 +24,7 @@
 
 #include <iostream>
 
-namespace swoosh {
+namespace sw {
   namespace glsl{
     static std::string formatGLSL(const char* glsl) {
       std::stringstream ss;
@@ -73,4 +73,4 @@ namespace swoosh {
 }
 
 #define SWOOSH_EMBED_TO_STR(...) #__VA_ARGS__
-#define GLSL(version, ...)  swoosh::glsl::formatGLSL("#version " #version "\n" SWOOSH_EMBED_TO_STR(#__VA_ARGS__))
+#define GLSL(version, ...)  sw::glsl::formatGLSL("#version " #version "\n" SWOOSH_EMBED_TO_STR(#__VA_ARGS__))

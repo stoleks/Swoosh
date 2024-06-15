@@ -16,11 +16,7 @@
 
 class HiScoreScene;
 
-using namespace swoosh;
-using namespace swoosh::game;
-using namespace swoosh::types;
-
-class GameplayScene : public Activity {
+class GameplayScene : public sw::Activity {
 private:
   sf::Texture* btn;
   sf::Texture* bgTexture, * bgNormal, * bgEmissive;
@@ -84,7 +80,7 @@ private:
 
   SaveFile& savefile;
 public:
-  GameplayScene(ActivityController& controller, SaveFile& savefile) : savefile(savefile), Activity(&controller) { 
+  GameplayScene(sw::ActivityController& controller, SaveFile& savefile) : savefile(savefile), Activity(&controller) { 
     mousePressed = mouseRelease = inFocus = isExtraLifeSpawned = false;
 
     ingameMusic.openFromFile(INGAME_MUSIC_PATH);
@@ -133,18 +129,18 @@ public:
 
     extraLifeTexture = loadTexture(EXTRA_LIFE_PATH);
     star = sf::Sprite(*extraLifeTexture);
-    setOrigin(star, 0.5, 0.5);
+    sw::setOrigin(star, 0.5, 0.5);
 
     playerTexture = loadTexture(PLAYER_PATH);
     playerNormal = loadTexture(PLAYER_N_PATH);
     playerEsm = loadTexture(PLAYER_E_PATH);
     player.sprite = sf::Sprite(*playerTexture);
-    setOrigin(player.sprite, 0.5, 0.5);
+    sw::setOrigin(player.sprite, 0.5, 0.5);
 
     trailTexture = loadTexture(PLAYER_TRAIL_PATH);
 
     shield = sf::Sprite(*shieldTexture);
-    setOrigin(shield, 0.5, 0.5);
+    sw::setOrigin(shield, 0.5, 0.5);
 
     for (int i = 0; i < 11; i++) {
       numeralTexture[i] = loadTexture(NUMERAL_PATH[i]);
@@ -170,7 +166,7 @@ public:
 
     particle enemy;
     enemy.sprite = sf::Sprite(*enemyTexture);
-    setOrigin(enemy.sprite, 0.5, 0.5);
+    sw::setOrigin(enemy.sprite, 0.5, 0.5);
 
     sf::Vector2u windowSize = getController().getVirtualWindowSize();
 
@@ -193,7 +189,7 @@ public:
     player.speed = sf::Vector2f(0, 0);
     player.sprite.setPosition(player.pos);
     player.friction = sf::Vector2f(0.96f, 0.96f);
-    setOrigin(player.sprite, 0.5, 0.5);
+    sw::setOrigin(player.sprite, 0.5, 0.5);
     alpha = 0;
     hasShield = true;
   }
@@ -212,18 +208,18 @@ public:
     if (lives < 0 || sf::Keyboard::isKeyPressed(sf::Keyboard::Escape)) {
       // Some segues can be customized like Checkerboard effect
       using custom = CheckerboardCustom<40, 40>;
-      using effect = segue<custom, milli<900>>;
+      using tx = segue<custom, arg::milli<900>>;
 
       // NOTE: This will never be called from HiScoreScene because
       // that screen _rewinds_ back to the title scene.
       // This code is left here to demonstrate that behavior.
       // In action, you will never see this function called.
-      auto onReturn = [this](const Context& context) {
+      auto onReturn = [this](const sw::Context& context) {
         std::cout << "GamePlayScene popped with data: " << context.type() << std::endl;
       };
 
       getController()
-        .push<effect::to<HiScoreScene>>(savefile)
+        .push<tx::to<HiScoreScene>>(savefile)
         .take(onReturn);
     }
 
@@ -274,7 +270,7 @@ public:
       if (e.lifetime == 0) {
         for (auto& l : lasers) {
           if (e.lifetime != 0) break; // Reward player once
-          if (doesCollide(l.sprite, e.sprite)) {
+          if (sw::doesCollide(l.sprite, e.sprite)) {
             l.life = 0;
             e.lifetime = 1.0; // trigger scale out
             score += 1000;
@@ -289,7 +285,7 @@ public:
       }
 
       if (lives >= 0 && e.lifetime == 0) {
-        if (alpha >= 255.0 && doesCollide(e.sprite, player.sprite)) {
+        if (alpha >= 255.0 && sw::doesCollide(e.sprite, player.sprite)) {
           if (hasShield && !killShield) {
             shieldChannel.play();
             killShield = true; // give us time to protect from other enemies
@@ -308,12 +304,12 @@ public:
           e.lifetime = 1.0; // trigger scale out on this enemy
         }
 
-        double angle = angleTo(player.pos, e.pos);
+        double angle = sw::angleTo(player.pos, e.pos);
 
         e.sprite.setRotation(90.0f + (float)angle);
         e.sprite.setPosition(e.pos);
 
-        sf::Vector2f dir = directionTo<float>(player.pos, e.pos);
+        sf::Vector2f dir = sw::directionTo<float>(player.pos, e.pos);
         sf::Vector2f delta;
         delta.x = dir.x * 2.0f;
         delta.y = dir.y * 2.0f;
@@ -356,7 +352,7 @@ public:
         star.setPosition((float)(rand() % windowSize.x), (float)(rand() % windowSize.y));
 
         // do not spawn on top of player
-        while (doesCollide(star, player.sprite)) {
+        while (sw::doesCollide(star, player.sprite)) {
           star.setPosition((float)(rand() % windowSize.x), (float)(rand() % windowSize.y));
         }
       }
@@ -365,7 +361,7 @@ public:
     if (lives < 0) return; // do not update player logic 
 
     if (isExtraLifeSpawned) {
-      if (doesCollide(star, player.sprite)) {
+      if (sw::doesCollide(star, player.sprite)) {
         isExtraLifeSpawned = false;
         extraLifeChannel.play();
         lives = std::min(lives+1, 9);
@@ -374,12 +370,12 @@ public:
     }
 
     sf::Vector2f mousepos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
-    double angle = angleTo(mousepos, player.pos);
+    double angle = sw::angleTo(mousepos, player.pos);
 
     player.sprite.setRotation(90.0f + (float)angle);
 
     if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Right)) {
-      sf::Vector2f dir = directionTo<float>(mousepos, player.pos);
+      sf::Vector2f dir = sw::directionTo<float>(mousepos, player.pos);
       sf::Vector2f delta = player.speed;
       delta.x += dir.x * 30.0f * (float)elapsed;
       delta.y += dir.y * 30.0f * (float)elapsed;
@@ -388,7 +384,7 @@ public:
 
       particle trail = player;
       trail.sprite.setTexture(*trailTexture, true);
-      setOrigin(trail.sprite, 0.5, 0.5);
+      sw::setOrigin(trail.sprite, 0.5, 0.5);
       trail.life = trail.lifetime = 1.0; // secs
       trails.insert(trails.begin(), trail);
     }
@@ -421,12 +417,12 @@ public:
       if (!mousePressed) {
         particle laser;
         laser.sprite = sf::Sprite(*laserTexture);
-        setOrigin(laser.sprite, 0.5, 0.5);
+        sw::setOrigin(laser.sprite, 0.5, 0.5);
         laser.pos = player.pos;
         laser.sprite.setRotation(90.0f + (float)angle);
         laser.sprite.setPosition(laser.pos);
 
-        sf::Vector2f dir = directionTo<float>(mousepos, laser.pos);
+        sf::Vector2f dir = sw::directionTo<float>(mousepos, laser.pos);
         sf::Vector2f delta;
         delta.x = dir.x * 500.0f;
         delta.y = dir.y * 500.0f;
@@ -512,7 +508,7 @@ public:
 
   }
 
-  void onDraw(IRenderer& renderer) override {
+  void onDraw(sw::IRenderer& renderer) override {
     const bool isCustomRenderer = getController().getCurrentRendererName() == "custom";
     sf::RenderWindow& window = getController().getWindow();
     auto windowSize = getController().getVirtualWindowSize();
@@ -580,7 +576,7 @@ public:
     }
     
     text.setString(std::string("score: ") + std::to_string(score));
-    setOrigin(text, 1, 0);
+    sw::setOrigin(text, 1, 0);
     text.setPosition(sf::Vector2f((float)windowSize.x - 50.0f, 0.0f));
 
     if (alpha < 255) {
@@ -607,13 +603,13 @@ public:
       numeral = sf::Sprite(*numeralTexture[10]); // X
       numeral.setPosition(player.pos.x, player.pos.y - 100);
 
-      // NOTE: `numeral` sprie is re-used so we clone its current state before submitting!
-      renderer.submit(Clone(numeral));
+      // NOTE: `numeral` sprite is re-used so we must clone before submitting!
+      renderer.submit(sw::Clone(numeral));
 
       numeral = sf::Sprite(*numeralTexture[lives]);
       numeral.setPosition(player.pos.x + 20, player.pos.y - 100);
 
-      // NOTE: The original `numeral` sprite is submitted without changing the cloned copies!
+      // NOTE: The original `numeral` will not affect the clone and vice-versa
       renderer.submit(&numeral);
 
       playerLife.setPosition(player.pos.x - 40, player.pos.y - 100);

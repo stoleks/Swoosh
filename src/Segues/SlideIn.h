@@ -2,7 +2,7 @@
 #include <Swoosh/Segue.h>
 #include <Swoosh/Ease.h>
 
-using namespace swoosh;
+using namespace sw;
 
 /**
   @class SlideIn
@@ -12,7 +12,7 @@ using namespace swoosh;
   Behavior is the same across all quality modes
 */
 
-template<types::direction direction>
+template<arg::direction direction>
 class SlideIn : public Segue {
 public:
 

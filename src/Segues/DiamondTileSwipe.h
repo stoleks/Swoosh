@@ -3,7 +3,7 @@
 #include <Swoosh/Segue.h>
 #include <Swoosh/Ease.h>
 
-using namespace swoosh;
+using namespace sw;
 
 /**
   @class DiamondTileSwipe
@@ -14,7 +14,7 @@ using namespace swoosh;
 
   If optimized for mobile, will capture the scenes once and use less vertices to increase performance on weak hardware
 */
-template<types::direction direction>
+template<arg::direction direction>
 class DiamondTileSwipe : public Segue {
 private:
   sf::Texture last, next;

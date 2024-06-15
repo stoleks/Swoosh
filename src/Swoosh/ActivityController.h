@@ -10,14 +10,14 @@
 #include <cstddef>
 #include <assert.h>
 
-namespace swoosh
+namespace sw
 {
   class CopyWindow; //!< forward decl
 
   class ActivityController
   {
-    friend class swoosh::Segue;
-    friend class swoosh::Activity;
+    friend class sw::Segue;
+    friend class sw::Activity;
 
   public:
     // Forward decl.
@@ -52,8 +52,8 @@ namespace swoosh
       }
     };
 
-    swoosh::Activity *last{nullptr};           //!< Pointer of the last activity
-    std::stack<swoosh::Activity *> activities; //!< Stack of activities
+    Activity *last{nullptr};                   //!< Pointer of the last activity
+    std::stack<Activity*> activities;          //!< Stack of activities
     sf::RenderWindow &handle;                  //!< sfml window reference
     sf::Vector2u virtualWindowSize;            //!< Window size requested to render with
     bool hasPendingChanges{};                  //!< If true, the activity controller is mutating the stack
@@ -90,8 +90,8 @@ namespace swoosh
     /**
       @brief constructs the activity controller, sets the virtual window size to the window, and initializes default values
     */
-    ActivityController(sf::RenderWindow &window, RenderEntries &renderEntries) : handle(window),
-                                                                                           renderEntries(renderEntries)
+    ActivityController(sf::RenderWindow &window, RenderEntries &renderEntries) 
+      : handle(window), renderEntries(renderEntries)
     {
       assert(renderEntries.count() > 0 && "ActivityController RenderEntries was empty!");
 
@@ -104,8 +104,8 @@ namespace swoosh
     /**
       @brief constructs the activity controller, sets the virtual window size to the user's desired size, and initializes default values
     */
-    ActivityController(sf::RenderWindow &window, sf::Vector2u virtualWindowSize, RenderEntries &renderEntries) : handle(window),
-                                                                                                                           renderEntries(renderEntries)
+    ActivityController(sf::RenderWindow &window, sf::Vector2u virtualWindowSize, RenderEntries &renderEntries)
+      : handle(window), renderEntries(renderEntries)
     {
       assert(renderEntries.count() > 0 && "ActivityController RenderEntries was empty!");
 
@@ -284,11 +284,11 @@ namespace swoosh
     }
 
     /**
-      @class segue
+      @class SegueImpl
       @brief This class is used internally to hide a lot of ugliness that makes the segue transition API easier to read
     */
     template <typename T, typename DurationType>
-    class segue
+    class SegueImpl
     {
     public:
       /**
@@ -301,15 +301,15 @@ namespace swoosh
       {
         SpinWhileTrue _(owner.hasPendingChanges);
 
-        swoosh::Activity *last = owner.activities.top();
+        Activity *last = owner.activities.top();
         owner.activities.pop();
 
-        swoosh::Activity *next = owner.activities.top();
+        Activity *next = owner.activities.top();
         owner.activities.pop();
 
-        next->popResult.resolve(std::forward<Args>(args)...);
+        next->popDataHolder.resolve(std::forward<Args>(args)...);
 
-        swoosh::Segue *effect = new T(DurationType::value(), last, next);
+        Segue *effect = new T(DurationType::value(), last, next);
         sf::Vector2u windowSize = owner.getVirtualWindowSize();
         sf::View view(sf::FloatRect(0, 0, (float)windowSize.x, (float)windowSize.y));
         effect->setView(view);
@@ -340,15 +340,15 @@ namespace swoosh
           @brief This will start a PUSH state for the activity controller and creates a segue object onto the stack
         */
         template <typename... Args>
-        PopResult* delegateActivityPush(ActivityController &owner, Args&&... args)
+        PopDataHolder* delegateActivityPush(ActivityController &owner, Args&&... args)
         {
           SpinWhileTrue _(owner.hasPendingChanges);
 
-          bool hasLast = (owner.activities.size() > 0);
-          swoosh::Activity *last = hasLast ? owner.activities.top() : owner.generateActivityFromWindow();
-          swoosh::Activity *next = new U(owner, std::forward<Args>(args)...);
+          const bool hasLast = (owner.activities.size() > 0);
+          Activity *last = hasLast ? owner.activities.top() : owner.generateActivityFromWindow();
+          Activity *next = new U(owner, std::forward<Args>(args)...);
 
-          swoosh::Segue *effect = new T(DurationType::value(), last, next);
+          Segue *effect = new T(DurationType::value(), last, next);
           sf::Vector2u windowSize = owner.getVirtualWindowSize();
           sf::View view(sf::FloatRect(0.f, 0.f, (float)windowSize.x, (float)windowSize.y));
           effect->setView(view);
@@ -360,7 +360,7 @@ namespace swoosh
           effect->started = true;
           owner.activities.push(effect);
 
-          return &last->popResult.reset();
+          return &last->popDataHolder.reset();
         }
 
         /**
@@ -376,21 +376,21 @@ namespace swoosh
         {
           SpinWhileTrue _(owner.hasPendingChanges);
 
-          std::stack<swoosh::Activity*> original;
+          std::stack<Activity*> original;
 
-          bool hasMore = (owner.activities.size() > 1);
+          const bool hasMore = (owner.activities.size() > 1);
 
           if (!hasMore)
           {
             return false;
           }
 
-          swoosh::Activity *last = owner.activities.top();
+          Activity *last = owner.activities.top();
           owner.activities.pop();
 
-          swoosh::Activity *next = owner.activities.top();
+          Activity *next = owner.activities.top();
 
-          while (dynamic_cast<T *>(next) == 0 && owner.activities.size() > 1)
+          while (dynamic_cast<T*>(next) == 0 && owner.activities.size() > 1)
           {
             original.push(next);
             owner.activities.pop();
@@ -415,7 +415,7 @@ namespace swoosh
           // Thenables are invalid
           while (original.size() > 0)
           {
-            swoosh::Activity *top = original.top();
+            Activity *top = original.top();
             top->onEnd();
 
             delete top;
@@ -426,7 +426,7 @@ namespace swoosh
           // Remove next from the activity stack
           owner.activities.pop();
 
-          swoosh::Segue *effect = new T(DurationType::value(), last, next);
+          Segue *effect = new T(DurationType::value(), last, next);
           sf::Vector2u windowSize = owner.getVirtualWindowSize();
           sf::View view(sf::FloatRect(0.0f, 0.0f, (float)windowSize.x, (float)windowSize.y));
           effect->setView(view);
@@ -438,7 +438,7 @@ namespace swoosh
           effect->started = true;
           owner.activities.push(effect);
 
-          next->popResult.resolve(std::forward<Args>(args)...);
+          next->popDataHolder.resolve(std::forward<Args>(args)...);
 
           return true;
         }
@@ -452,7 +452,7 @@ namespace swoosh
     template <class T>
     struct IsSegueType
     {
-      static char is_to(swoosh::Activity *) { return 0; }
+      static char is_to(Activity*) { return 0; }
 
       static double is_to(...) { return 0; }
 
@@ -481,20 +481,22 @@ namespace swoosh
     {
       using activity_type = typename T::activity_type;
 
-      PopResult* popResult{ nullptr };
+      PopDataHolder* popDataHolder{ nullptr };
 
       template <typename... Args>
       ResolvePushSegueIntent(ActivityController &owner, Args &&...args)
       {
         if (owner.segueAction != SegueAction::none) {
-          popResult = &PopResult::dummy();
+          popDataHolder = &PopDataHolder::dummy();
           return;
         }
 
         owner.segueAction = SegueAction::push;
         T segueResolve{};
 
-        popResult = &segueResolve.delegateActivityPush(owner, std::forward<Args>(args)...)->reset();
+        popDataHolder = 
+          &segueResolve
+          .delegateActivityPush(owner, std::forward<Args>(args)...)->reset();
       }
     };
 
@@ -507,25 +509,25 @@ namespace swoosh
     {
       using activity_type = T;
 
-      PopResult* popResult{ nullptr };
+      PopDataHolder* popDataHolder{ nullptr };
 
       template <typename... Args>
-      ResolvePushSegueIntent(ActivityController &owner, Args &&...args)
+      ResolvePushSegueIntent(ActivityController &owner, Args&&...args)
       {
-        popResult = &PopResult::dummy();
+        popDataHolder = &PopDataHolder::dummy();
 
         if (owner.segueAction != SegueAction::none) {
           return;
         }
 
-        swoosh::Activity *next = new T(owner, std::forward<Args>(args)...);
+        Activity *next = new T(owner, std::forward<Args>(args)...);
 
         if (owner.last != nullptr) {
-          popResult = &owner.last->popResult.reset();
+          popDataHolder = &owner.last->popDataHolder.reset();
         }
         else if (owner.activities.size() > 0) {
           owner.last = owner.activities.top();
-          popResult = &owner.last->popResult.reset();
+          popDataHolder = &owner.last->popDataHolder.reset();
         }
 
         SpinWhileTrue _(owner.hasPendingChanges);
@@ -542,10 +544,10 @@ namespace swoosh
       @brief Immediately pushes a segue or activity onto the stack depending on the resolved class type
     */
     template <typename T, typename... Args>
-    PopResult& push(Args&&... args)
+    PopDataHolder& push(Args&&... args)
     {
       Intent<T> intent(*this, std::forward<Args>(args)...);
-      return *(intent.popResult);
+      return *(intent.popDataHolder);
     }
 
     /**
@@ -555,7 +557,10 @@ namespace swoosh
     void replace(Args&&...args)
     {
       const size_t before = activities.size();
-      ResolvePushSegueIntent<T, IsSegueType<T>::value> intent(*this, std::forward<Args>(args)...);
+
+      ResolvePushSegueIntent<T, IsSegueType<T>::value> 
+        intent(*this, std::forward<Args>(args)...);
+
       const size_t after = activities.size();
 
       // quick feature hack:
@@ -607,7 +612,7 @@ namespace swoosh
       if (!hasMore || segueAction != SegueAction::none)
         return false;
 
-      last->popResult.resolve(std::forward<Args>(args)...);
+      last->popDataHolder.resolve(std::forward<Args>(args)...);
       stackAction = StackAction::pop;
 
       return true;
@@ -659,7 +664,7 @@ namespace swoosh
       template <typename... Args>
       ResolveRewindSegueIntent(ActivityController &owner, Args &&...args)
       {
-        std::stack<swoosh::Activity*> original;
+        std::stack<Activity*> original;
 
         const bool hasLast = (owner.activities.size() > 0);
 
@@ -671,7 +676,7 @@ namespace swoosh
 
         SpinWhileTrue _(owner.hasPendingChanges);
 
-        swoosh::Activity *next = owner.activities.top();
+        Activity *next = owner.activities.top();
 
         while (dynamic_cast<T*>(next) == 0 && owner.activities.size() > 1)
         {
@@ -695,7 +700,7 @@ namespace swoosh
 
         // User asked that data sent to us moves goes to the next activity
         if (top->popData.adopted) {
-          next->popData.give(top->popData);
+          next->popData.carry(top->popData);
         }
 
         next->popData.resolve(std::forward<Args>(args)...);
@@ -730,7 +735,7 @@ namespace swoosh
     /**
       @brief Returns the current activity pointer. Nullptr if no acitivty exists on the stack.
     */
-    swoosh::Activity *getCurrentActivity()
+    Activity *getCurrentActivity()
     {
       if (getStackSize() > 0)
         return activities.top();
@@ -739,7 +744,7 @@ namespace swoosh
     }
 
     // const-qualified
-    const swoosh::Activity* getCurrentActivity() const
+    const Activity* getCurrentActivity() const
     {
       if (getStackSize() > 0)
         return activities.top();
@@ -802,7 +807,7 @@ namespace swoosh
       // Check for segues
       if (segueAction != SegueAction::none)
       {
-        swoosh::Segue *segue = static_cast<swoosh::Segue*>(activities.top());
+        Segue *segue = static_cast<Segue*>(activities.top());
 
         if (getRequestedQuality() == quality::mobile)
         {
@@ -890,7 +895,7 @@ namespace swoosh
 
       This function is kept here to make the library files header-only and avoid linkage.
     */
-    void setActivityView(IRenderer &renderer, swoosh::Activity *activity)
+    void setActivityView(IRenderer &renderer, Activity *activity)
     {
       renderer.setView(activity->getView());
     }
@@ -908,7 +913,7 @@ namespace swoosh
     /**
      @brief This function properly terminates an active segue and pushes the next activity onto the stack
    */
-    void executePopSegue(swoosh::Segue *segue)
+    void executePopSegue(Segue *segue)
     {
       SpinWhileTrue _(hasPendingChanges);
 
@@ -916,7 +921,7 @@ namespace swoosh
 
       activities.pop();
 
-      swoosh::Activity *next = segue->next;
+      Activity *next = segue->next;
 
       const bool popLike = segueAction == SegueAction::pop
         || segueAction == SegueAction::replace
@@ -925,7 +930,7 @@ namespace swoosh
       if (popLike)
       {
         // We're removing an item from the stack
-        swoosh::Activity *last = segue->last;
+        Activity *last = segue->last;
         last->onEnd();
 
         if (next->started)
@@ -946,12 +951,12 @@ namespace swoosh
         }
         else if (segueAction == SegueAction::pop || segueAction == SegueAction::rewind) {
           // User asked that data sent to us moves goes to the next activity
-          if (last->popResult.adopted) {
-            next->popResult.give(last->popResult);
+          if (last->popDataHolder.adopted) {
+            next->popDataHolder.carry(last->popDataHolder);
           }
 
-          // invokes callback fn in popResult(...)
-          next->popResult.exec();
+          // invokes callback fn passed in PopDataHolder::take(...)
+          next->popDataHolder.exec();
         }
 
         delete last;
@@ -974,21 +979,21 @@ namespace swoosh
     {
       SpinWhileTrue _(hasPendingChanges);
 
-      swoosh::Activity* last = activities.top();
+      Activity* last = activities.top();
 
       last->onEnd();
       activities.pop();
 
-      swoosh::Activity* next = activities.top();
+      Activity* next = activities.top();
 
       if (activities.size() > 0) {
         // User asked that data sent to us moves goes to the next activity
-        if (last->popResult.adopted) {
-          next->popResult.give(last->popResult);
+        if (last->popDataHolder.adopted) {
+          next->popDataHolder.carry(last->popDataHolder);
         }
 
         // Take pop result
-       next->popResult.exec();
+       next->popDataHolder.exec();
        next->onResume();
       }
 
@@ -1003,7 +1008,7 @@ namespace swoosh
       {
         if (segueAction != SegueAction::none)
         {
-          swoosh::Segue *segue = static_cast<swoosh::Segue*>(activities.top());
+          Segue *segue = static_cast<Segue*>(activities.top());
           segue->onEnd();
           segue->last->onEnd();
           segue->next->onEnd();
@@ -1124,9 +1129,8 @@ namespace swoosh
     return new CopyWindow(*this);
   }
 
-  // useful types in their own namespace
-  namespace types
-  {
+  // segue transition argument types
+  namespace arg {
     enum class direction : int
     {
       left,
@@ -1155,10 +1159,8 @@ namespace swoosh
     };
 
     /*
-    shorthand notations*/
-    template <typename T, typename DurationType = seconds<1>>
-    using segue = ActivityController::segue<T, DurationType>;
-
+    shorthand notations
+    */
     template <int val = 0>
     using sec = seconds<val>;
 
@@ -1168,4 +1170,8 @@ namespace swoosh
     template <sf::Int64 val = 0>
     using micro = microseconds<val>;
   }
+
+  // Public access to the implementation type
+  template <typename T, typename DurationType = arg::seconds<1>>
+  using segue = typename ActivityController::SegueImpl<T, DurationType>;
 }

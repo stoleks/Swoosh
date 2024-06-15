@@ -4,7 +4,7 @@
 #include <vector>
 #include <functional>
 
-namespace swoosh {
+namespace sw {
   /**
    * @class Timer
    * @brief Creates stopwatch utility objects that can be paused, reset, and started again
@@ -16,9 +16,9 @@ namespace swoosh {
     class Trigger; // forward decl
 
   private:
-    sf::Int32 elapsed{ 0 }; //!< Elapsed time in milliseconds
-    bool paused{ true }; //!< If true, paused
-    bool reversed{ false }; //!< If true, will count down from `elapsed`
+    sf::Int32 elapsed{ 0 };                //!< Elapsed time in milliseconds
+    bool paused{ true };                   //!< If true, paused
+    bool reversed{ false };                //!< If true, will count down from `elapsed`
     std::map<sf::Int32, Trigger> triggers; //!< List of triggers to perform
   public:
     /**
@@ -179,7 +179,7 @@ namespace swoosh {
           for (auto&& item : triggers) {
             auto startTime = item.first;
             if (startTime <= elapsed) {
-              auto trigger = item.second;
+              auto& trigger = item.second;
               for (auto&& tasks : trigger.tasks) {
                 auto progress = elapsed - startTime;
 
@@ -206,7 +206,7 @@ namespace swoosh {
             // NOTE: unoptimized. We should change the trigger point to be
             //                    = startTime + duration
             if (startTime < elapsed) {
-              auto trigger = item.second;
+              auto& trigger = item.second;
               for (auto&& tasks : trigger.tasks) {
                 auto progress = elapsed - startTime;
 
@@ -221,7 +221,7 @@ namespace swoosh {
               }
             }
             else if (elapsed <= startTime) { // this case catches passed items
-              auto trigger = item.second;
+              auto& trigger = item.second;
               for (auto&& tasks : trigger.tasks) {
                 auto missedProgress = lastTickElapsed - startTime;
 
@@ -242,7 +242,8 @@ namespace swoosh {
       @return a new Trigger object to perform a task or tasks
     */
     Trigger& at(const sf::Time& time) {
-      const auto& [tuple, status] = triggers.insert({ time.asMilliseconds(), Trigger{} });
+      const auto& [tuple, status] = 
+        triggers.insert({ time.asMilliseconds(), Trigger{} });
       return tuple->second;
     }
 
@@ -257,7 +258,7 @@ namespace swoosh {
       @brief sets the timer to reverse counting from `elapsed`
     */
     void reverse(bool state) {
-      this->reversed = state;
+      reversed = state;
     }
 
     /**
@@ -268,7 +269,7 @@ namespace swoosh {
       some given time
       */
     void set(const sf::Time& time) {
-      this->elapsed = time.asMilliseconds();
+      elapsed = time.asMilliseconds();
     }
   };
 }

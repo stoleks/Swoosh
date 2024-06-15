@@ -4,7 +4,7 @@
 #include <Swoosh/Ease.h>
 #include <Swoosh/Shaders.h>
 
-using namespace swoosh;
+using namespace sw;
 
 /**
   @class Dream

@@ -3,7 +3,7 @@
 #include <Swoosh/Segue.h>
 #include <Swoosh/Ease.h>
 
-using namespace swoosh;
+using namespace sw;
 
 /**
   @class Cube3D
@@ -13,7 +13,7 @@ using namespace swoosh;
 
   If optimized for mobile, will capture the scenes once and use less vertices to increase performance on weak hardware
 */
-template<types::direction direction>
+template<arg::direction direction>
 class Cube3D : public Segue {
 private:
   sf::Texture last, next;
@@ -57,7 +57,7 @@ public:
 
     shader.setUniform("direction", static_cast<int>(direction));
 
-    if (direction == direction::right || direction == direction::up) {
+    if (direction == arg::direction::right || direction == arg::direction::up) {
       shader.setUniform("texture", temp);
       shader.setUniform("texture2", temp2);
     }

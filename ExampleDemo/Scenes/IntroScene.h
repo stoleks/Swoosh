@@ -14,25 +14,22 @@
 
 const char* LOADING = "NOW LOADING";
 
-using namespace swoosh;
-using namespace swoosh::types;
-
-// TODO: what to do with this scene?
-class IntroScene : public Activity {
+// TODO: what to do visually with this scene?
+class IntroScene : public sw::Activity{
 private:
   sf::Font font;
   sf::Text text;
 
-  Timer timer;
+  sw::Timer timer;
 
   bool inFocus;
 public:
-  IntroScene(ActivityController& controller) : Activity(&controller) {
+  IntroScene(sw::ActivityController& controller) : Activity(&controller) {
     font.loadFromFile(GAME_FONT);
     text.setFont(font);
     text.setString(LOADING);
     text.setFillColor(sf::Color::White);
-    setOrigin(text, 0.5f, 0.5f);
+    sw::setOrigin(text, 0.5f, 0.5f);
 
     sf::Vector2u windowSize = getController().getVirtualWindowSize();
     setView(windowSize);
@@ -54,12 +51,12 @@ public:
       using fx = segue<VerticalSlice>;
       using tx = fx::to<MainMenuScene>;
 
-      auto onReturn = [](Context& context) {
+      auto onReturn = [](sw::Context& context) {
         // We can check for previous contexts which were adopted
         auto& prev = context.previous();
         if (!prev.has_value()) return;
 
-        Context& prevContext = prev.value();
+        sw::Context& prevContext = prev.value();
         if (!prevContext.is<std::string>()) return;
         std::cout << prevContext.as<std::string>() << std::endl;
 
@@ -87,10 +84,10 @@ public:
   void onResume() override {
   }
 
-  void onDraw(IRenderer& renderer) override {
+  void onDraw(sw::IRenderer& renderer) override {
 
     renderer.clear(sf::Color::Black);
-    renderer.submit(Immediate(&text));
+    renderer.submit(sw::Immediate(&text));
   }
 
   void onEnd() override {

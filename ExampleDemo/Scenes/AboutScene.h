@@ -29,10 +29,7 @@ const char* CONTROLS_INFO =
 ">> Right click to boost and dodge\n\n" \
 ">> Collect stars for extra life\n\n";
 
-using namespace swoosh;
-using namespace swoosh::types;
-
-class AboutScene : public Activity {
+class AboutScene : public sw::Activity {
 private:
   sf::Texture * btn;
   sf::Texture * sfmlTexture;
@@ -51,12 +48,12 @@ private:
   float screenMid;
   float screenBottom;
 
-  Timer timer;
+  sw::Timer timer;
 
   bool inFocus;
   bool canClick;
 public:
-  AboutScene(ActivityController& controller) : Activity(&controller) {
+  AboutScene(sw::ActivityController& controller) : Activity(&controller) {
     canClick = false;
 
     font.loadFromFile(GAME_FONT);
@@ -73,7 +70,7 @@ public:
     sfmlTexture = loadTexture(SFML_PATH);
     sfml = sf::Sprite(*sfmlTexture);
     sfml.setScale(0.7f, 0.7f);
-    setOrigin(sfml, 0.60f, 0.60f);
+    sw::setOrigin(sfml, 0.60f, 0.60f);
 
     sf::Vector2u windowSize = getController().getVirtualWindowSize();
     setView(windowSize);
@@ -120,8 +117,8 @@ public:
             std::string message;
           };
 
-          using effect = segue<Cube3D<direction::right>, sec<2>>;
-          getController().pop<effect>("Goodbye from the AboutScene!");
+          using tx = segue<Cube3D<arg::direction::right>, arg::sec<2>>;
+          getController().pop<tx>("Goodbye from the AboutScene!");
         }
         else {
           goback.text = "FIN";
@@ -150,7 +147,7 @@ public:
   void onResume() override {
   }
 
-  void onDraw(IRenderer& renderer) override {
+  void onDraw(sw::IRenderer& renderer) override {
     sf::RenderWindow& window = getController().getWindow();
 
     renderer.clear(sf::Color::Black);
@@ -160,13 +157,13 @@ public:
     text.setPosition(sf::Vector2f(screenMid, 200));
     text.setFillColor(sf::Color::White);
     text.setString(info);
-    setOrigin(text, 0.5f, 0);
+    sw::setOrigin(text, 0.5f, 0);
 
-    renderer.submit(Immediate(&text));
+    renderer.submit(sw::Immediate(&text));
 
     text.setFont(font);
     text.setFillColor(sf::Color::Black);
-    setOrigin(text, 0.5f, 0.5f);
+    sw::setOrigin(text, 0.5f, 0.5f);
     goback.draw(renderer, text, screenMid, screenBottom - 40);
   }
 
