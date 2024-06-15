@@ -7,14 +7,14 @@ namespace swoosh {
   class ActivityController; /* forward decl */
 
     // Forward decl.
-  class Yieldable;
+  class PopResult;
 
   /**
   * @class Context
   * @brief When push() later produces data via pop(...), it lives in Context.
   */
   class Context {
-    friend class Yieldable;
+    friend class PopResult;
 
     void (*deleter)(void*) { nullptr };
     void* data{ nullptr };
@@ -55,7 +55,7 @@ namespace swoosh {
     }
 
     ~Context() {
-      // Never initialized, abort early
+      // Case: never initialized, abort early
       if (typenameStr.empty()) return;
       
       // free allocated memory
@@ -110,34 +110,34 @@ namespace swoosh {
   };
 
   /**
-  * @class Yeildable
-  * @brief A construct to handle returning to activities with data
+  * @class PopResult
+  * @brief A construct to handle data from popped activities
   */
-  class Yieldable {
+  class PopResult {
     friend class ActivityController;
     friend class Activity;
 
     using CallbackFn = std::function<void(Context&)>;
     CallbackFn callback;
 
-    static Yieldable& dummy() {
-      static Yieldable _; return _;
+    static PopResult& dummy() {
+      static PopResult _; return _;
     }
 
     Context context;
-    bool retained{};
+    bool adopted{};
 
-    // No special constructor
-    Yieldable() = default;
+    // Default constructor
+    PopResult() = default;
 
     // No copies
-    Yieldable(const Yieldable&) = delete;
+    PopResult(const PopResult&) = delete;
 
     // No moves
-    Yieldable(Yieldable&&) = delete;
+    PopResult(PopResult&&) = delete;
 
-    void share(Yieldable& other) {
-      context.adopt(std::move(other.context));
+    void give(PopResult& dest) {
+      context.adopt(std::move(dest.context));
     }
 
     void exec() {
@@ -145,26 +145,26 @@ namespace swoosh {
       callback(context);
     }
 
-    Yieldable& reset() {
+    PopResult& reset() {
       context = Context();
       callback = nullptr;
-      retained = false;
+      adopted = false;
       return *this;
     }
 
     template<typename... Args>
-    Yieldable& resolve(Args&&... args) {
+    PopResult& resolve(Args&&... args) {
       context = Context(std::forward<Args>(args)...);
       return *this;
     }
 
   public:
-    void yield(const CallbackFn& fn) {
+    void take(const CallbackFn& fn) {
       callback = fn;
     }
 
-    void retain() {
-      retained = true;
+    void adopt() {
+      adopted = true;
     }
   };
 
@@ -183,16 +183,16 @@ namespace swoosh {
     - onLeave , called when this activity is leaving the view during a segue
     - onEnd   , called when the activity has finished leaving a view after a segue
     - onUpdate, called every tick while still in view
-    - onDraw  , called every tick while still in view *
+    - onDraw  , called every tick while still in view (*)
     
-    * some segues may optimize and skip draw calls (see: class WhiteWashFade)
+    (*) some segues may optimize and skip draw calls (see: class WhiteWashFade)
   */
   class Activity {
     friend class ActivityController;
 
   private:
     bool started{}; //!< Flag denotes if an activity should call onStart() or onResume()
-    Yieldable yieldable; //!< Callback handle when returning
+    PopResult popResult; //!< Callback handle when returning
 
   protected:
     ActivityController* controller{ nullptr }; //!< Pointer to the activity controller

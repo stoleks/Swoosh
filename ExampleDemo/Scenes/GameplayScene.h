@@ -219,10 +219,12 @@ public:
       // This code is left here to demonstrate that behavior.
       // In action, you will never see this function called.
       auto onReturn = [this](const Context& context) {
-        std::cout << "GamePlayScene yield with type: " << context.type() << std::endl;
+        std::cout << "GamePlayScene popped with data: " << context.type() << std::endl;
       };
 
-      getController().push<effect::to<HiScoreScene>>(savefile).yield(onReturn);
+      getController()
+        .push<effect::to<HiScoreScene>>(savefile)
+        .take(onReturn);
     }
 
     for (auto& m : meteors) {

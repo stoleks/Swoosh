@@ -55,7 +55,7 @@ public:
       using tx = fx::to<MainMenuScene>;
 
       auto onReturn = [](Context& context) {
-        // We can check for previous contexts which were retained
+        // We can check for previous contexts which were adopted
         auto& prev = context.previous();
         if (!prev.has_value()) return;
 
@@ -64,7 +64,9 @@ public:
         std::cout << prevContext.as<std::string>() << std::endl;
 
       };
-      getController().push<tx>().yield(onReturn);
+      getController()
+        .push<tx>()
+        .take(onReturn);
 
       // Reset so we can return and kick off the effect again
       timer.reset();

@@ -201,17 +201,18 @@ public:
 
           getController()
             .push<intent>(savefile) // pass savefile into next scene's ctor
-            .yield(onReturn);       // when we return, obtain data passed up
+            .take(onReturn);        // when we return, obtain data passed up
         }
         else if (b.text == ABOUT_OPTION) {
           using segue = segue<PageTurn, sec<2>>;
           using intent = segue::to<AboutScene>;
           
-          // retain() stores the context data to forward when this scene also
-          // pops off the stack. The alternative would be to yield(), check,
-          // and store the data manually and pass the data back wherever 
-          // pop() is called. retain() conveniently does this for you.
-          getController().push<intent>().retain();
+          // adopt() stores the context data to forward when this scene also
+          // pops off the stack. The alternative would be to take(Context&),
+          // then check, somehow store the data manually, and finally pass
+          // this data back wherever pop() is called. 
+          // adopt() conveniently does this for you.
+          getController().push<intent>().adopt();
         }
         else if (b.text == QUIT_OPTION) {
           using intent = segue<ZoomFadeIn>;

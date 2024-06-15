@@ -26,12 +26,12 @@ namespace swoosh
 
   private:
     // helper util for `hasPendingChanges`
-    class pending_raii
+    class SpinWhileTrue
     {
       bool &value;
 
     public:
-      pending_raii(bool &source) : value(source)
+      SpinWhileTrue(bool &source) : value(source)
       {
         // Behave like a spin-lock
         // If this true else-where, wait our turn to acquire it
@@ -41,7 +41,7 @@ namespace swoosh
         value = true;
       }
 
-      ~pending_raii()
+      ~SpinWhileTrue()
       {
         value = false;
       }
@@ -299,7 +299,7 @@ namespace swoosh
       template<typename... Args>
       void delegateActivityPop(ActivityController& owner, Args&&... args)
       {
-        pending_raii _(owner.hasPendingChanges);
+        SpinWhileTrue _(owner.hasPendingChanges);
 
         swoosh::Activity *last = owner.activities.top();
         owner.activities.pop();
@@ -307,7 +307,7 @@ namespace swoosh
         swoosh::Activity *next = owner.activities.top();
         owner.activities.pop();
 
-        next->yieldable.resolve(std::forward<Args>(args)...);
+        next->popResult.resolve(std::forward<Args>(args)...);
 
         swoosh::Segue *effect = new T(DurationType::value(), last, next);
         sf::Vector2u windowSize = owner.getVirtualWindowSize();
@@ -340,9 +340,9 @@ namespace swoosh
           @brief This will start a PUSH state for the activity controller and creates a segue object onto the stack
         */
         template <typename... Args>
-        Yieldable* delegateActivityPush(ActivityController &owner, Args&&... args)
+        PopResult* delegateActivityPush(ActivityController &owner, Args&&... args)
         {
-          pending_raii _(owner.hasPendingChanges);
+          SpinWhileTrue _(owner.hasPendingChanges);
 
           bool hasLast = (owner.activities.size() > 0);
           swoosh::Activity *last = hasLast ? owner.activities.top() : owner.generateActivityFromWindow();
@@ -360,7 +360,7 @@ namespace swoosh
           effect->started = true;
           owner.activities.push(effect);
 
-          return &last->yieldable.reset();
+          return &last->popResult.reset();
         }
 
         /**
@@ -374,7 +374,7 @@ namespace swoosh
         template <typename... Args>
         bool delegateActivityRewind(ActivityController &owner, Args&&... args)
         {
-          pending_raii _(owner.hasPendingChanges);
+          SpinWhileTrue _(owner.hasPendingChanges);
 
           std::stack<swoosh::Activity*> original;
 
@@ -438,7 +438,7 @@ namespace swoosh
           effect->started = true;
           owner.activities.push(effect);
 
-          next->yieldable.resolve(std::forward<Args>(args)...);
+          next->popResult.resolve(std::forward<Args>(args)...);
 
           return true;
         }
@@ -481,20 +481,20 @@ namespace swoosh
     {
       using activity_type = typename T::activity_type;
 
-      Yieldable* yieldable{ nullptr };
+      PopResult* popResult{ nullptr };
 
       template <typename... Args>
       ResolvePushSegueIntent(ActivityController &owner, Args &&...args)
       {
         if (owner.segueAction != SegueAction::none) {
-          yieldable = &Yieldable::dummy();
+          popResult = &PopResult::dummy();
           return;
         }
 
         owner.segueAction = SegueAction::push;
         T segueResolve{};
 
-        yieldable = &segueResolve.delegateActivityPush(owner, std::forward<Args>(args)...)->reset();
+        popResult = &segueResolve.delegateActivityPush(owner, std::forward<Args>(args)...)->reset();
       }
     };
 
@@ -507,12 +507,12 @@ namespace swoosh
     {
       using activity_type = T;
 
-      Yieldable* yieldable{ nullptr };
+      PopResult* popResult{ nullptr };
 
       template <typename... Args>
       ResolvePushSegueIntent(ActivityController &owner, Args &&...args)
       {
-        yieldable = &Yieldable::dummy();
+        popResult = &PopResult::dummy();
 
         if (owner.segueAction != SegueAction::none) {
           return;
@@ -521,14 +521,14 @@ namespace swoosh
         swoosh::Activity *next = new T(owner, std::forward<Args>(args)...);
 
         if (owner.last != nullptr) {
-          yieldable = &owner.last->yieldable.reset();
+          popResult = &owner.last->popResult.reset();
         }
         else if (owner.activities.size() > 0) {
           owner.last = owner.activities.top();
-          yieldable = &owner.last->yieldable.reset();
+          popResult = &owner.last->popResult.reset();
         }
 
-        pending_raii _(owner.hasPendingChanges);
+        SpinWhileTrue _(owner.hasPendingChanges);
         owner.activities.push(next);
         owner.stackAction = StackAction::push;
       }
@@ -542,10 +542,10 @@ namespace swoosh
       @brief Immediately pushes a segue or activity onto the stack depending on the resolved class type
     */
     template <typename T, typename... Args>
-    Yieldable& push(Args&&... args)
+    PopResult& push(Args&&... args)
     {
       Intent<T> intent(*this, std::forward<Args>(args)...);
-      return *(intent.yieldable);
+      return *(intent.popResult);
     }
 
     /**
@@ -607,7 +607,7 @@ namespace swoosh
       if (!hasMore || segueAction != SegueAction::none)
         return false;
 
-      last->yieldable.resolve(std::forward<Args>(args)...);
+      last->popResult.resolve(std::forward<Args>(args)...);
       stackAction = StackAction::pop;
 
       return true;
@@ -669,7 +669,7 @@ namespace swoosh
           return;
         }
 
-        pending_raii _(owner.hasPendingChanges);
+        SpinWhileTrue _(owner.hasPendingChanges);
 
         swoosh::Activity *next = owner.activities.top();
 
@@ -694,12 +694,12 @@ namespace swoosh
         }
 
         // User asked that data sent to us moves goes to the next activity
-        if (top->yieldable.retained) {
-          next->yieldable.share(top->yieldable);
+        if (top->popData.adopted) {
+          next->popData.give(top->popData);
         }
 
-        next->yieldable.resolve(std::forward<Args>(args)...);
-        next->yieldable.exec();
+        next->popData.resolve(std::forward<Args>(args)...);
+        next->popData.exec();
 
         // Cleanup memory
         while (original.size() > 0) {
@@ -756,7 +756,7 @@ namespace swoosh
     */
     void update(double elapsed)
     {
-      pending_raii _(isUpdating);
+      SpinWhileTrue _(isUpdating);
 
       if (activities.size() == 0)
         return;
@@ -781,7 +781,7 @@ namespace swoosh
 
           if (stackAction == StackAction::replace)
           {
-            pending_raii _(hasPendingChanges);
+            SpinWhileTrue _(hasPendingChanges);
 
             auto top = activities.top();
             activities.pop();     // top
@@ -802,11 +802,11 @@ namespace swoosh
       // Check for segues
       if (segueAction != SegueAction::none)
       {
-        swoosh::Segue *segue = static_cast<swoosh::Segue *>(activities.top());
+        swoosh::Segue *segue = static_cast<swoosh::Segue*>(activities.top());
 
         if (getRequestedQuality() == quality::mobile)
         {
-          segue->timer.update(sf::seconds(static_cast<float>(elapsed)));
+          segue->timer.update(sf::seconds(float(elapsed)));
         }
         else
         {
@@ -832,14 +832,16 @@ namespace swoosh
       if (activities.size() == 0 || renderer == nullptr)
         return;
 
+      Activity* top = activities.top();
+
       // Prepare buffer for this pass
       renderer->clear(sf::Color::Transparent);
 
       // Update viewport
-      renderer->setView(activities.top()->view);
+      renderer->setView(top->view);
 
       // Draw to gpu texture
-      activities.top()->onDraw(*renderer);
+      top->onDraw(*renderer);
 
       // Perform our draw operations to the target texture in the renderer
       renderer->draw();
@@ -853,7 +855,7 @@ namespace swoosh
 
       // Fill the window with the bg color
       if (clearBeforeDraw)
-        handle.clear(activities.top()->bgColor);
+        handle.clear(top->bgColor);
 
       // draw screen
       handle.draw(post);
@@ -863,8 +865,10 @@ namespace swoosh
     }
 
     /**
-     @brief Pops everything off the stack with respect to the activity life-cycle (onEnd(), remove, then delete for each entry)
-     This ensures any activity has proper cleanup in the order the consuming software should expect.
+     @brief Pops everything off the stack with respect to the activity
+      life-cycle (onEnd(), remove, then delete for each entry)
+     This ensures any activity has proper cleanup in the order the
+     software should expect.
     */
     void clearStackSafely()
     {
@@ -906,7 +910,7 @@ namespace swoosh
    */
     void executePopSegue(swoosh::Segue *segue)
     {
-      pending_raii _(hasPendingChanges);
+      SpinWhileTrue _(hasPendingChanges);
 
       segue->onEnd();
 
@@ -942,12 +946,12 @@ namespace swoosh
         }
         else if (segueAction == SegueAction::pop || segueAction == SegueAction::rewind) {
           // User asked that data sent to us moves goes to the next activity
-          if (last->yieldable.retained) {
-            next->yieldable.share(last->yieldable);
+          if (last->popResult.adopted) {
+            next->popResult.give(last->popResult);
           }
 
-          // invokes callback fn in yield(...)
-          next->yieldable.exec();
+          // invokes callback fn in popResult(...)
+          next->popResult.exec();
         }
 
         delete last;
@@ -968,36 +972,38 @@ namespace swoosh
      */
     void executePop()
     {
-      pending_raii _(hasPendingChanges);
+      SpinWhileTrue _(hasPendingChanges);
 
-      swoosh::Activity* activity = activities.top();
+      swoosh::Activity* last = activities.top();
 
-      activity->onEnd();
+      last->onEnd();
       activities.pop();
+
+      swoosh::Activity* next = activities.top();
 
       if (activities.size() > 0) {
         // User asked that data sent to us moves goes to the next activity
-        if (activity->yieldable.retained) {
-          activities.top()->yieldable.share(activity->yieldable);
+        if (last->popResult.adopted) {
+          next->popResult.give(last->popResult);
         }
 
-        // Handle our yeild
-        activities.top()->yieldable.exec();
-        activities.top()->onResume();
+        // Take pop result
+       next->popResult.exec();
+       next->onResume();
       }
 
-      delete activity;
+      delete last;
     }
 
     void executeClearStackSafely()
     {
-      pending_raii _(hasPendingChanges);
+      SpinWhileTrue _(hasPendingChanges);
 
       while (activities.size() > 0)
       {
         if (segueAction != SegueAction::none)
         {
-          swoosh::Segue *segue = static_cast<swoosh::Segue *>(activities.top());
+          swoosh::Segue *segue = static_cast<swoosh::Segue*>(activities.top());
           segue->onEnd();
           segue->last->onEnd();
           segue->next->onEnd();
