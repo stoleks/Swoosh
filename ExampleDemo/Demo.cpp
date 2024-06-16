@@ -43,9 +43,9 @@ int main()
   std::string errors;
   if(renderOptions.built() && renderOptions.countValid() > 0) {
     for(auto& iter : renderOptions.list()) {
-      auto score = iter.getRenderer().checkSystemCompatibility();
+      auto score = iter.getInstance().checkSystemCompatibility();
       if(score == sw::SystemCompatibilityScore::sufficient) {
-        app.setRenderer(iter.getIndex());
+        app.activateRenderEntry(iter.getIndex());
         continue;
       }
       if (score == sw::SystemCompatibilityScore::build_error) {
@@ -106,11 +106,13 @@ int main()
       else if (event.type == sf::Event::KeyPressed) {
         // Toggle to different renderers using F-keys
         sf::Keyboard::Key code = event.key.code;
-        if (code == sf::Keyboard::F1 && app.setRenderer(0)) {
-          window.setTitle("Swoosh Demo (renderer=" + app.getCurrentRendererName() + ")");
+        if (code == sf::Keyboard::F1 && app.activateRenderEntry(0)) {
+          const std::string& name = app.getActiveRenderEntry().getName();
+          window.setTitle("Swoosh Demo (renderer=" + name + ")");
         }
-        else if (code == sf::Keyboard::F2 && app.setRenderer(1)) {
-          window.setTitle("Swoosh Demo (renderer=" + app.getCurrentRendererName() + ")");
+        else if (code == sf::Keyboard::F2 && app.activateRenderEntry(1)) {
+          const std::string& name = app.getActiveRenderEntry().getName();
+          window.setTitle("Swoosh Demo (renderer=" + name + ")");
         }
       }
     }

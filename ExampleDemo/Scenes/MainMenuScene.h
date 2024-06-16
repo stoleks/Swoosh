@@ -19,6 +19,7 @@
 #include <Segues/WhiteWashFade.h>
 #include <Segues/SlideIn.h>
 #include <Segues/BlendFadeIn.h>
+#include <Segues/PushIn.h>
 #include <Segues/PageTurn.h>
 #include <Segues/ZoomOut.h>
 #include <Segues/ZoomIn.h>
@@ -275,7 +276,7 @@ public:
 
   void onDraw(sw::IRenderer& renderer) override {
     const bool isCustomRenderer =
-      getController().getCurrentRendererName() == "custom";
+      getController().getActiveRenderEntry().getName() == "custom";
 
     renderer.submit(Draw3D(&bg, bgNormal));
 

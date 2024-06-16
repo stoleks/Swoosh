@@ -50,8 +50,9 @@ namespace sw {
       : name(name), ptr(ptr), idx(idx), error(error), deleter(deleter) {}
     ~RenderEntry() { free(); }
 
-   inline const char* getName() const { return name; };
-   inline IRenderer& getRenderer() { return *ptr; }
+   inline std::string getName() const { return name; };
+   inline const char* getNameCStr() const { return name; }
+   inline IRenderer& getInstance() { return *ptr; }
    inline size_t getIndex() const { return idx; }
    inline const bool hasError() const { return error.empty() == false; }
    inline const std::string& getError() const { return error; };
@@ -356,10 +357,10 @@ namespace sw {
   private:
     friend class ActivityController;
     std::list<std::pair<CtorFn, DtorFn>> ctorDtor; // !< Deferred init
-    std::list<RenderEntry> entries; // !< Evaluated render entries
-    std::list<std::string_view> pending; // !< Name of enrolled renderers
-    size_t valid{}; // !< Internal counter for successfully-built renderers
-    bool ready{}; // !< If true, the entries have already been built
+    std::list<RenderEntry> entries;                // !< Evaluated render entries
+    std::list<std::string_view> pending;           // !< Name of enrolled render instances
+    size_t valid{};                                // !< Counter for well-built instances
+    bool ready{};                                  // !< Denotes if instances are built
 
     // Builds render entries from enrollment list
     void buildEntries() {

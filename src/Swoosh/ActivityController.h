@@ -60,9 +60,9 @@ namespace sw
     bool isUpdating{};                         //!< If true, the controller is updating activities and may mutate the stack
     bool useShaders{true};                     //!< If false, segues can considerately use shader effects
     bool clearBeforeDraw{true};                //!< If true, clears the render target with the Activity's bg color
-    mutable IRenderer *renderer{nullptr};      //!< Active renderer to submit draw events to
-    std::size_t rendererIdx{0};                //!< Active renderer index
-    RenderEntries& renderEntries;              //!< All registered renderers
+    mutable IRenderer *renderer{nullptr};      //!< Active render instance to submit draw events to
+    std::size_t renderIdx{0};                  //!< Active render entry index
+    RenderEntries& renderEntries;              //!< All registered render entries
 
     //!< Useful for state management and skipping need for dynamic casting
     enum class SegueAction : int
@@ -158,74 +158,36 @@ namespace sw
     }
 
     /**
-      @brief Query the number of registered renderers
+      @brief Query the number of registered render entries
+      Note, this counts both valid and invalid render instances
     */
-    const std::size_t getNumOfRenderers() const
+    const std::size_t getNumOfRenderEntries() const
     {
       return renderEntries.count();
     }
 
     /**
-      @brief Query the active renderer index
+      @brief Query the active render entry index
     */
-    const std::size_t getCurrentRendererIndex() const
+    const RenderEntry& getActiveRenderEntry() const
     {
-      return rendererIdx;
+      return *std::next(renderEntries.list().begin(), renderIdx);
     }
 
     /**
-      @brief Query the active renderer name
+      @brief Sets the active render instance to the entry at the given index
+      @param idx the base-0 index of the instance in the RenderEntries list
+      @return true if the instance was valid and set, false otherwsie
     */
-    const std::string getCurrentRendererName() const
+    bool activateRenderEntry(std::size_t idx)
     {
-      return std::next(renderEntries.list().begin(), rendererIdx)->getName();
-    }
+      if (idx >= renderEntries.count()) return false;
 
-    /**
-      @brief Sets the active renderer to the entry at the given index parameter
-      @param idx the base-0 index of the renderer in the RendererEntries list to use
-      @return true if the renderer was set successfully, false if the index is invalid
-    */
-    bool setRenderer(std::size_t idx)
-    {
-      if (auto next = getRenderer(idx); next) {
-        renderer = next;
-        rendererIdx = idx;
-      }
+      renderIdx = idx;
+      RenderEntry& entry = *std::next(renderEntries.list().begin(), renderIdx);
+      renderer = &(entry.getInstance());
 
-      return rendererIdx == idx;
-    }
-
-    /**
-      @brief Query a provided renderer by its entry index
-      @param idx the base-0 index of the renderer in the RendererEntries list
-      @return A pointer to the renderer if valid, nullptr if invalid.
-    */
-    IRenderer* getRenderer(std::size_t idx) {
-      if (idx < 0 || idx >= getNumOfRenderers())
-        return nullptr;
-
-      return std::addressof(std::next(renderEntries.list().begin(), idx)->getRenderer());
-    }
-
-    /**
-      @brief Query a provided renderer by its typename `RendererT`
-      @return A pointer to the renderer that matches first, nullptr if not found.
-    */
-    template<typename RendererT>
-    RendererT* getRenderer() {
-      auto query = [this](RendererEntry& entry) {
-        return typeid(entry.getRenderer()) == typeid(RendererT);
-      };
-
-      auto start = rendererEntries.list().begin();
-      auto end = rendererEntries.list().end();
-      auto iter = std::find_if(start, end, query);
-
-      if (iter == end)
-        return nullptr;
-
-      return iter->getRenderer();
+      return true;
     }
 
     /**
@@ -397,7 +359,7 @@ namespace sw
             next = owner.activities.top();
           }
 
-          if (owner.activities.empty())
+          if (owner.activities.empty() || next == nullptr)
           {
             // We did not find it, push the states back on the list and return false
             while (original.size() > 0)

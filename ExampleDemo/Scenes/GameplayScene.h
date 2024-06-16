@@ -201,8 +201,9 @@ public:
   }
 
   void onUpdate(double elapsed) override {
-    sf::RenderWindow& window = getController().getWindow();
-    auto windowSize = getController().getVirtualWindowSize();
+    auto& C = getController();
+    sf::RenderWindow& window = C.getWindow();
+    auto windowSize = C.getVirtualWindowSize();
 
     // End the game if the player is out of lives OR escape key is pressed
     if (lives < 0 || sf::Keyboard::isKeyPressed(sf::Keyboard::Escape)) {
@@ -218,8 +219,7 @@ public:
         std::cout << "GamePlayScene popped with data: " << context.type() << std::endl;
       };
 
-      getController()
-        .push<tx::to<HiScoreScene>>(savefile)
+      C.push<tx::to<HiScoreScene>>(savefile)
         .take(onReturn);
     }
 
@@ -228,7 +228,7 @@ public:
       m.sprite.setPosition(m.pos);
       m.sprite.setRotation(m.pos.x);
 
-      const sf::Vector2u window = getController().getVirtualWindowSize();
+      const sf::Vector2u window = C.getVirtualWindowSize();
       if (m.pos.x > window.x + 100) {
         m.pos.x = -50.0f;
       } else if (m.pos.x < -100) {
@@ -444,7 +444,7 @@ public:
 
     // Left here as an example on how safe it is to clear the stack anywhere:
     // if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Num0)) {
-    //   getController().clearStackSafely();
+    //   C.clearStackSafely();
     // }
   }
 
@@ -463,6 +463,8 @@ public:
   }
 
   void onEnter() override {
+    auto& C = getController();
+
     std::cout << "DemoScene OnEnter called" << std::endl;
 
     for (int i = 50; i > 0; i--) {
@@ -493,7 +495,7 @@ public:
         p.sprite = sf::Sprite(*meteorTiny);
       }
 
-      auto windowSize = getController().getVirtualWindowSize();
+      auto windowSize = C.getVirtualWindowSize();
       p.pos = sf::Vector2f((float)(rand() % windowSize.x), (float)(rand() % windowSize.y));
       p.sprite.setPosition(p.pos);
       p.sprite.setRotation(p.pos.x);
@@ -509,9 +511,10 @@ public:
   }
 
   void onDraw(sw::IRenderer& renderer) override {
-    const bool isCustomRenderer = getController().getCurrentRendererName() == "custom";
-    sf::RenderWindow& window = getController().getWindow();
-    auto windowSize = getController().getVirtualWindowSize();
+    auto& C = getController();
+    const bool isCustomRenderer = C.getActiveRenderEntry().getName() == "custom";
+    sf::RenderWindow& window = C.getWindow();
+    auto windowSize = C.getVirtualWindowSize();
 
     // Track the mouse and create a light source for this pass on the mouse!
     sf::Vector2f mousepos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
