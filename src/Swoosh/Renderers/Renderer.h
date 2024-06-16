@@ -36,7 +36,7 @@ namespace sw {
 
   /**
     @class RenderEntry
-    @brief Simple aggregate that houses a renderer and its name
+    @brief Simple aggregate that houses a render agent and its name
   */
   class RenderEntry {
   private:

@@ -167,11 +167,18 @@ namespace sw
     }
 
     /**
-      @brief Query the active render entry index
+      @brief Returns the first render instance to matching type T
+      @return T* if instance has a base class T, nullptr if none match
     */
-    const RenderEntry& getActiveRenderEntry() const
-    {
-      return *std::next(renderEntries.list().begin(), renderIdx);
+    template<typename T>
+    T* getRenderInstance() {
+      assert(renderEntries.built() && "Expected call to buildRenderEntries() first.");
+      for (auto&& entry : renderEntries.list()) {
+        T* instance = dynamic_cast<T*>(&entry.getInstance());
+        if (instance != nullptr) return instance;
+      }
+
+      return nullptr;
     }
 
     /**
@@ -181,6 +188,7 @@ namespace sw
     */
     bool activateRenderEntry(std::size_t idx)
     {
+      assert(renderEntries.built() && "Expected call to buildRenderEntries() first.");
       if (idx >= renderEntries.count()) return false;
 
       renderIdx = idx;
@@ -189,6 +197,26 @@ namespace sw
 
       return true;
     }
+
+    /**
+      @brief Fetch the active render entry
+      @warning Activate a render instance before using!
+    */
+    const RenderEntry& getActiveRenderEntry() const
+    {
+      assert(renderer != nullptr && "Expected call to activateRenderEntry() first.");
+      return *std::next(renderEntries.list().begin(), renderIdx);
+    }
+
+    /**
+      @brief Non-const qualified version
+    */
+    RenderEntry& getActiveRenderEntry()
+    {
+      assert(renderer != nullptr && "Expected call to activateRenderEntry() first.");
+      return *std::next(renderEntries.list().begin(), renderIdx);
+    }
+    
 
     /**
       @brief Request the activity controller to clear the render target (window or texture) before drawing.
