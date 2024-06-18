@@ -2,37 +2,159 @@
 #include <Swoosh/Renderers/Renderer.h>
 #include <SFML/Graphics.hpp>
 #include <functional>
+#include <optional>
+#include <tuple>
+#include <type_traits>
 
 namespace sw {
   class ActivityController; /* forward decl */
 
     // Forward decl.
   class PopDataHolder;
+  class Context;
+
+  namespace {
+      // FOR INTERNAL USE ONLY.
+    // 
+    // This utility class is used to manage the data stored in the Context.
+    // Data stored must be copyable otherwise the compiler will abort.
+    // 
+    // The bucket remembers its type and can dissolve single type values 
+    // into their immediate return type via `T& read()`. 
+    // 
+    // Multi values are returned as `std::tuple<Ts...>& read()`.
+    //
+    // The data in Bucket cleans up after itself.
+    class Bucket {
+      friend class Context;
+
+      void (*deleter)(void*) { nullptr };
+      void* data{ nullptr };
+      std::string underliningTypename;
+
+      //
+      // Private memory management methods
+      //
+
+      template<typename UnderliningType>
+      void copy(const std::optional<UnderliningType>& option) {
+        if (!option.has_value()) return;
+        copy(*option);
+      }
+
+      template<typename UnderliningType>
+      void copy(const UnderliningType& copyable) {
+        static void (*DeletePolicyPtr)(void*) =
+          +[](void* data){ 
+          ((UnderliningType*)data)->~UnderliningType(); 
+          free(data);
+        };
+
+        // sanity check
+        cleanup();
+
+        deleter = DeletePolicyPtr;
+        data = malloc(sizeof(UnderliningType));
+
+        UnderliningType* ptr = new (data) UnderliningType;
+        *ptr = copyable;
+        underliningTypename = typeid(UnderliningType).name();
+      }
+
+      // Initialize data with value T or a tuple<T, Ts...>
+      // Iff param is one optional<T> whose value is nullopt, then noop
+      // Iff param is one optional<T> with a value, then the value is extracted
+      template<typename T, typename...Ts>
+      void init(T&& t, Ts&&...ts) {
+        if constexpr (sizeof...(Ts) == 0) {
+          static_assert(
+            std::is_copy_constructible_v<T>,
+            "Popping with userdata requires copying"
+            );
+
+          copy(t);
+        }
+        else {
+          static_assert(
+            std::is_copy_constructible_v<T>
+            && (std::is_copy_constructible_v<Ts>, ...),
+            "Popping with userdata requires copying"
+            );
+          copy(std::tuple{ t, ts... });
+        }
+      }
+
+
+      void cleanup() {
+        // free allocated memory
+        if (deleter) (*deleter)(data);
+        data = nullptr;
+      }
+
+      bool empty() const {
+        return data == nullptr;
+      }
+
+      // Checks the underlining type
+      template<typename T, typename... Ts>
+      bool has() const {
+        if constexpr (sizeof...(Ts) == 0) {
+          return underliningTypename == typeid(T).name();
+        }
+        else {
+          return underliningTypename == typeid(std::tuple<T, Ts...>).name();
+        }
+      }
+
+      // Returns reference to the underlining object or the tuple
+      template<typename T, typename... Ts>
+      auto read() -> decltype(auto) {
+        if constexpr (sizeof...(Ts) == 0) {
+          return *((T*)data);
+        }
+        else {
+          return *((std::tuple<T, Ts...>*)data);
+        }
+      }
+
+      const std::string& type() const {
+        return underliningTypename;
+      }
+
+      //
+      // public
+      //
+
+    public:
+      Bucket() = default;
+      Bucket(Bucket&& rhs) noexcept {
+        *this = std::move(rhs);
+      }
+
+      Bucket& operator=(Bucket&& rhs) noexcept {
+        std::swap(underliningTypename, rhs.underliningTypename);
+        std::swap(data, rhs.data);
+        std::swap(deleter, rhs.deleter);
+        rhs.underliningTypename.clear();
+        rhs.data = nullptr;
+        rhs.deleter = nullptr;
+        return *this;
+      }
+
+      ~Bucket() {
+        cleanup();
+      }
+    };
+  }
 
   /**
   * @class Context
-  * @brief When push() later produces data via pop(...), it lives in Context.
+  * @brief If a push() later produces data via pop(...), it lives in Context.
   */
   class Context {
     friend class PopDataHolder;
-
-    void (*deleter)(void*) { nullptr };
-    void* data{ nullptr };
-    std::string typenameStr;
     Context* adopted{ nullptr };
-
-    template<typename T>
-    void init(const T& copyable) {
-      static void (*DeletePolicyT)(void*) =
-        +[](void* data) { ((T*)data)->~T(); free(data); };
-
-      deleter = DeletePolicyT;
-
-      data = malloc(sizeof(T));
-      T* ptr = new (data) T;
-      *ptr = copyable;
-      typenameStr = typeid(T).name();
-    }
+    Bucket mem{};
 
     void adopt(Context&& other) {
       adopted = new Context(std::move(other));
@@ -41,13 +163,14 @@ namespace sw {
   public:
     Context() = default;
 
+    // Raw str specialization
     Context(const char* str) {
-      init(std::string(str));
+      mem.init(std::string(str));
     }
 
-    template<typename T>
-    Context(const T& copyable) {
-      init(copyable);
+    template <typename... Ts>
+    Context(Ts&&...ts) {
+      mem.init(std::forward<Ts>(ts)...);
     }
 
     Context(Context&& rhs) noexcept {
@@ -55,52 +178,41 @@ namespace sw {
     }
 
     ~Context() {
-      // Case: never initialized, abort early
-      if (typenameStr.empty()) return;
-      
-      // free allocated memory
-      if(deleter) (*deleter)(data);
-
       // free adopted memory
       delete adopted;
       adopted = nullptr;
+
+      // Bucket::~Bucket() will invoke
     }
 
     Context& operator=(Context&& rhs) noexcept {
-      std::swap(typenameStr, rhs.typenameStr);
-      std::swap(data, rhs.data);
-      std::swap(deleter, rhs.deleter);
+      std::swap(mem, rhs.mem);
       std::swap(adopted, rhs.adopted);
-
-      rhs.typenameStr.clear();
-      rhs.data = nullptr;
-      rhs.deleter = nullptr;
       rhs.adopted = nullptr;
-
       return *this;
     }
 
-    const std::string& type() const {
-      return typenameStr;
+    template <typename... Ts>
+    const bool has() const {
+      return mem.has<Ts...>();
     }
 
-    template<typename T>
-    const bool is() const {
-      return typenameStr == typeid(T).name();
-    }
-
-    template<typename T>
-    T& as() const {
-      return *((T*)data);
+    template <typename... Ts>
+    auto read() -> decltype(auto) {
+      return mem.read<Ts...>();
     }
 
     const bool empty() const {
-      return data == nullptr;
+      return mem.empty();
     }
 
-    std::optional<Context> previous(size_t skip = 0) {
+    const std::string& type() const {
+      return mem.type();
+    }
+
+    std::optional<Context> previous(size_t count = 0) {
       Context* prev = adopted;
-      while (skip-- > 0 && prev) {
+      while (count-- > 0 && prev) {
         prev = prev->adopted;
       }
 

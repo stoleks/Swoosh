@@ -177,34 +177,34 @@ public:
         selectFX.play();
 
         if (b.text == PLAY_OPTION) {
-          using segue = sw::segue<HorizontalOpen>;
-          using tx = segue::to<GameplayScene>;
+          using fx = sw::segue<HorizontalOpen>;
+          using tx = fx::to<GameplayScene>;
           getController().push<tx>(savefile);
 
           fadeMusic = true;
         }
         else if (b.text == SCORE_OPTION) {
-          using segue = segue<RadialCCW, arg::sec<2>>;
-          using tx = segue::to<HiScoreScene>;
+          using fx = segue<RadialCCW, arg::sec<2>>;
+          using tx = fx::to<HiScoreScene>;
 
           auto onReturn =
             [this](sw::Context& context) {
             // Notice that this callback happens ONLY when we return
             // _directly_ from the HiScoreScene from this option and not from
             // the PLAY_OPTION flow.
-            if (!context.is<SaveFile>()) return;
-            SaveFile& s = context.as<SaveFile>();
+            if (!context.has<SaveFile>()) return;
+            SaveFile& s = context.read<SaveFile>();
 
             std::cout << "Recent hiscore was: " << s.scores.back() << std::endl;
             };
 
           getController()
             .push<tx>(savefile) // pass savefile into next scene's ctor
-            .take(onReturn);        // when we return, obtain data passed up
+            .take(onReturn);    // when we return, obtain data passed up
         }
         else if (b.text == ABOUT_OPTION) {
-          using segue = segue<PageTurn, arg::sec<2>>;
-          using tx = segue::to<AboutScene>;
+          using fx = segue<PageTurn, arg::sec<2>>;
+          using tx = fx::to<AboutScene>;
           
           // adopt() stores the context data to forward when this scene also
           // pops off the stack. The alternative would be to take(Context&),
@@ -214,8 +214,8 @@ public:
           getController().push<tx>().adopt();
         }
         else if (b.text == QUIT_OPTION) {
-          using tx = segue<ZoomFadeIn>;
-          getController().pop<tx>();
+          using fx = segue<ZoomFadeIn>;
+          getController().pop<fx>();
         }
       }
     }

@@ -118,7 +118,7 @@ public:
           };
 
           using tx = segue<Cube3D<arg::direction::right>, arg::sec<2>>;
-          getController().pop<tx>("Goodbye from the AboutScene!");
+          getController().pop<tx>(std::string("Goodbye from the AboutScene!"), false, 12);
         }
         else {
           goback.text = "FIN";

@@ -11,7 +11,7 @@ struct SaveFile {
     std::cout << "inside dconstructor!" << std::endl;
   }
 
-  const bool empty() { return names.empty(); }
+  const bool empty() const { return names.empty(); }
 
   void writeToFile(std::string path) {
     std::ofstream outfile(path, std::ofstream::trunc);
@@ -47,7 +47,7 @@ struct SaveFile {
     scores.clear();
 
     std::ifstream infile(path);
-    char name[4];
+    char name[4]{};
     int score;
 
     if (!infile) { infile.close();  return; }

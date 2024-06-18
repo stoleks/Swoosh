@@ -57,8 +57,10 @@ public:
         if (!prev.has_value()) return;
 
         sw::Context& prevContext = prev.value();
-        if (!prevContext.is<std::string>()) return;
-        std::cout << prevContext.as<std::string>() << std::endl;
+        std::cout << "prevContext typename: " << prevContext.type() << std::endl;
+        if (!prevContext.has<std::string, bool, int>()) return;
+        auto& [str, b, i] = prevContext.read<std::string, bool, int>();
+        std::cout << str << ", " << b << ", " << i << std::endl;
 
       };
       getController()

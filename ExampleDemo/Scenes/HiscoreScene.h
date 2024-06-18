@@ -95,8 +95,9 @@ public:
       selectFX.play();
 
       // Rewind lets us pop back to a particular scene in our stack history
-      using tx = segue<CircleClose, arg::sec<1>>;
-      bool found = getController().rewind<tx::to<MainMenuScene>>(saveFile);
+      using fx = segue<CircleClose, arg::sec<1>>;
+      using tx = fx::to<MainMenuScene>;
+      const bool found = getController().rewind<tx>(saveFile);
 
       // should never happen
       // but your games may need to check so here it is an example

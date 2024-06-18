@@ -380,14 +380,14 @@ namespace sw
 
           Activity *next = owner.activities.top();
 
-          while (dynamic_cast<T*>(next) == 0 && owner.activities.size() > 1)
+          while (dynamic_cast<U*>(next) == 0 && owner.activities.size() > 1)
           {
             original.push(next);
             owner.activities.pop();
             next = owner.activities.top();
           }
 
-          if (owner.activities.empty() || next == nullptr)
+          if (next == nullptr && owner.activities.empty())
           {
             // We did not find it, push the states back on the list and return false
             while (original.size() > 0)
