@@ -2,17 +2,19 @@
 #include <SFML/Graphics.hpp>
 #include <functional>
 
-namespace swoosh {
+namespace sw
+{
 
   class ActionList;
 
   /**
   @class ActionItem
 
-  Your standard ActionItem is non-blocking and seemingly runs concurrent with your other 
+  Your standard ActionItem is non-blocking and seemingly runs concurrent with your other
   non-blocking action items
   */
-  class ActionItem {
+  class ActionItem
+  {
     friend class ActionList;
     friend class ClearPreviousActions;
     friend class ClearAllActions;
@@ -24,14 +26,19 @@ namespace swoosh {
   private:
     bool isDoneFlag{};
     std::size_t index{};
-    ActionList* list{ nullptr };
+    ActionList *list{nullptr};
 
   public:
-    ActionItem() { isBlocking = isDoneFlag = false; index = -1; list = nullptr; }
-    virtual ~ActionItem() {};
+    ActionItem()
+    {
+      isBlocking = isDoneFlag = false;
+      index = -1;
+      list = nullptr;
+    }
+    virtual ~ActionItem(){};
 
     virtual void update(sf::Time elapsed) = 0;
-    virtual void draw(sf::RenderTexture& surface) = 0;
+    virtual void draw(sf::RenderTexture &surface) = 0;
     void markDone() { isDoneFlag = true; }
     const bool isDone() const { return isDoneFlag; }
     const std::size_t getIndex() const { return index; }
@@ -40,26 +47,27 @@ namespace swoosh {
   /**
   @class BlockingActionItem
   When the action list reaches a BlockingActionItem the action list stops iterating.
-  Only until the blocking action item is marked for cleanup using `markDone()` 
+  Only until the blocking action item is marked for cleanup using `markDone()`
   will the action list continue passed.
   */
 
-  class BlockingActionItem : public ActionItem {
+  class BlockingActionItem : public ActionItem
+  {
   public:
-    BlockingActionItem() : ActionItem() {
+    BlockingActionItem() : ActionItem()
+    {
       isBlocking = true;
     }
 
-    virtual ~BlockingActionItem() { }
+    virtual ~BlockingActionItem() {}
 
     virtual void update(sf::Time elapsed) = 0;
-    virtual void draw(sf::RenderTexture& surface) = 0;
+    virtual void draw(sf::RenderTexture &surface) = 0;
   };
 
   class ClearPreviousActions;
   class ClearAllActions;
   class ConditionalBranchListAction;
-
 
   /**
   @class ActionList
@@ -76,95 +84,114 @@ namespace swoosh {
   at cleanup and when an item is marked done using `markDone()`
   */
 
-  class ActionList {
+  class ActionList
+  {
     friend class ClearPreviousActions;
     friend class ClearAllActions;
     friend class ConditionalBranchListAction;
+
   private:
-    std::vector<ActionItem*> items;
+    std::vector<ActionItem *> items;
     bool clearFlag{};
+
   public:
-    void updateIndexesFrom(std::size_t pos) {
-      for (pos; pos < items.size(); pos++) {
+    void updateIndexesFrom(std::size_t pos)
+    {
+      for (pos; pos < items.size(); pos++)
+      {
         items[pos]->index++;
       }
     }
 
-    void insert(std::size_t pos, ActionItem* item) {
+    void insert(std::size_t pos, ActionItem *item)
+    {
       item->list = this;
       items.insert(items.begin() + pos, item);
       item->index = pos;
       updateIndexesFrom(pos);
     }
 
-
-    void insert(std::size_t pos, ActionList* other) {
+    void insert(std::size_t pos, ActionList *other)
+    {
       if (other == nullptr)
         throw std::runtime_error("ActionList is nullptr");
 
-      for (int i = 0; i < other->items.size(); i++) {
+      for (int i = 0; i < other->items.size(); i++)
+      {
         this->insert(pos + i, other->items[i]);
       }
 
       other->items.clear();
     }
 
-    void add(ActionItem* item) {
+    void add(ActionItem *item)
+    {
       item->list = this;
       items.push_back(item);
       item->index = items.size() - 1;
     }
 
-    const bool isEmpty() const {
+    const bool isEmpty() const
+    {
       return items.empty();
     }
 
-    void clear() {
-      for (auto item : items) {
+    void clear()
+    {
+      for (auto item : items)
+      {
         delete item;
       }
 
       items.clear();
     }
 
-    void append(ActionList& list) {
-      for (int i = 0; i < list.items.size(); i++) {
+    void append(ActionList &list)
+    {
+      for (int i = 0; i < list.items.size(); i++)
+      {
         items.push_back(list.items[i]);
       }
 
       list.items.clear();
     }
 
-    void append(ActionList* list) {
+    void append(ActionList *list)
+    {
       if (list == nullptr)
         throw std::runtime_error("ActionList is nullptr");
 
-      for (int i = 0; i < list->items.size(); i++) {
+      for (int i = 0; i < list->items.size(); i++)
+      {
         items.push_back(list->items[i]);
       }
 
       list->items.clear();
-
     }
 
-    void update(sf::Time elapsed) {
-      for (int i = 0; i < items.size();) {
-        if (items[i]->isDone()) {
+    void update(sf::Time elapsed)
+    {
+      for (int i = 0; i < items.size();)
+      {
+        if (items[i]->isDone())
+        {
           delete items[i];
           items.erase(items.begin() + i);
           continue;
         }
 
-        items[i]->index = (std::size_t) i;
+        items[i]->index = (std::size_t)i;
         items[i]->update(elapsed);
 
-        if (clearFlag) {
+        if (clearFlag)
+        {
           clearFlag = false;
           i = 0;
           continue; // startover, the list has been modified
         }
 
-        if (items[i]->isBlocking) {
+        if (items[i]->isBlocking)
+        {
           break;
         }
 
@@ -172,10 +199,13 @@ namespace swoosh {
       }
     }
 
-    void draw(sf::RenderTexture& surface) {
-      for (auto item : items) {
+    void draw(sf::RenderTexture &surface)
+    {
+      for (auto item : items)
+      {
         item->draw(surface);
-        if (item->isBlocking) {
+        if (item->isBlocking)
+        {
           break;
         }
       }
@@ -183,7 +213,8 @@ namespace swoosh {
 
     ActionList() { clearFlag = false; }
 
-    ~ActionList() {
+    ~ActionList()
+    {
       clear();
     }
   };
@@ -196,26 +227,31 @@ namespace swoosh {
   ClearPreviousActions is suited for this task.
   */
 
-  class ClearPreviousActions : public BlockingActionItem {
+  class ClearPreviousActions : public BlockingActionItem
+  {
     friend class ActionList;
 
   public:
-    ClearPreviousActions() {
-
+    ClearPreviousActions()
+    {
     }
 
-    virtual void update(sf::Time elapsed) {
+    virtual void update(sf::Time elapsed)
+    {
       if (isDone())
         return;
 
-      for (int i = 0; i < list->items.size();) {
-        ActionItem* item = list->items[i];
-        if (item != this) {
+      for (int i = 0; i < list->items.size();)
+      {
+        ActionItem *item = list->items[i];
+        if (item != this)
+        {
           delete item;
           list->items.erase(list->items.begin() + i);
           continue;
         }
-        else {
+        else
+        {
           break;
         }
       }
@@ -224,7 +260,8 @@ namespace swoosh {
       markDone();
     }
 
-    virtual void draw(sf::RenderTexture& surface) {
+    virtual void draw(sf::RenderTexture &surface)
+    {
     }
   };
 
@@ -232,25 +269,29 @@ namespace swoosh {
   @class ClearAllActions
   @brief You may need to signal a cleanup in the action list to remove everything including non-blocking action items
 
-  ClearAllActions is suited for this task. 
+  ClearAllActions is suited for this task.
   */
 
-  class ClearAllActions : public BlockingActionItem {
+  class ClearAllActions : public BlockingActionItem
+  {
     friend class ActionList;
 
   public:
-    ClearAllActions() {
-
+    ClearAllActions()
+    {
     }
 
-    virtual void update(sf::Time elapsed) {
+    virtual void update(sf::Time elapsed)
+    {
       if (isDone())
         return;
 
       // Delete and remove everything but this one
-      for (int i = 0; i < list->items.size();) {
-        ActionItem* item = list->items[i];
-        if (item != this) {
+      for (int i = 0; i < list->items.size();)
+      {
+        ActionItem *item = list->items[i];
+        if (item != this)
+        {
           delete item;
           list->items.erase(list->items.begin() + i);
           continue;
@@ -262,15 +303,16 @@ namespace swoosh {
       markDone();
     }
 
-    virtual void draw(sf::RenderTexture& surface) {
+    virtual void draw(sf::RenderTexture &surface)
+    {
     }
   };
 
   /**
   @class ConditionalBranchListAction
-  
+
   @brief Situations may require to branch off into separate lists depending on the query function
-  
+
   ConditionalBranchListAction is similar to an if-else block where the outcome is to append different action items
 
   It takes a lambda function that returns bool and two ActionList pointers.
@@ -278,41 +320,49 @@ namespace swoosh {
   ConditionalBranchListAction will delete the action lists and cleanup for you
   */
 
-  class ConditionalBranchListAction : public BlockingActionItem {
+  class ConditionalBranchListAction : public BlockingActionItem
+  {
     friend class ActionList;
 
   private:
-    ActionList* branchIfTrue{ nullptr }, * branchIfFalse{ nullptr };
+    ActionList *branchIfTrue{nullptr}, *branchIfFalse{nullptr};
     std::function<bool()> condition;
+
   public:
     ConditionalBranchListAction(std::function<bool()> condition, ActionList *branchIfTrue, ActionList *branchIfFalse)
-      : condition(condition), branchIfTrue(branchIfTrue), branchIfFalse(branchIfFalse) {
-
+        : condition(condition), branchIfTrue(branchIfTrue), branchIfFalse(branchIfFalse)
+    {
     }
 
-    ~ConditionalBranchListAction() {
-      if (branchIfFalse) delete branchIfFalse;
-      if (branchIfTrue)  delete branchIfTrue;
+    ~ConditionalBranchListAction()
+    {
+      if (branchIfFalse)
+        delete branchIfFalse;
+      if (branchIfTrue)
+        delete branchIfTrue;
     }
 
-    virtual void update(sf::Time elapsed) {
+    virtual void update(sf::Time elapsed)
+    {
       if (isDone())
         return;
 
-      if (condition()) {
+      if (condition())
+      {
         list->insert(getIndex(), branchIfTrue);
         branchIfFalse->clear();
       }
-      else {
+      else
+      {
         list->insert(getIndex(), branchIfFalse);
         branchIfTrue->clear();
       }
 
-
       markDone();
     }
 
-    virtual void draw(sf::RenderTexture& surface) {
+    virtual void draw(sf::RenderTexture &surface)
+    {
     }
   };
 }

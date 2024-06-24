@@ -298,6 +298,14 @@ namespace sw
         owner.activities.pop();
 
         next->popDataHolder.resolve(std::forward<Args>(args)...);
+        
+        // User asked that data sent to us moves on with the next activity
+        if (last->popDataHolder.adopted) {
+          next->popDataHolder.carry(last->popDataHolder);
+        }
+
+        // React to pop result before segue begins
+        next->popDataHolder.exec();
 
         Segue *effect = new T(DurationType::value(), last, next);
         sf::Vector2u windowSize = owner.getVirtualWindowSize();
@@ -366,8 +374,6 @@ namespace sw
         {
           SpinWhileTrue _(owner.hasPendingChanges);
 
-          std::stack<Activity*> original;
-
           const bool hasMore = (owner.activities.size() > 1);
 
           if (!hasMore)
@@ -377,8 +383,9 @@ namespace sw
 
           Activity *last = owner.activities.top();
           owner.activities.pop();
-
           Activity *next = owner.activities.top();
+
+          std::stack<Activity*> original;
 
           while (dynamic_cast<U*>(next) == 0 && owner.activities.size() > 1)
           {
@@ -424,11 +431,20 @@ namespace sw
           effect->setActivityViewFunc = &ActivityController::setActivityView;
           effect->resetViewFunc = &ActivityController::resetView;
 
+          // Fill our pop data holder with the event data, if any
+          next->popDataHolder.resolve(std::forward<Args>(args)...);
+
+          // User asked that data sent to us moves on with the next activity
+          if (last->popDataHolder.adopted) {
+            next->popDataHolder.carry(last->popDataHolder);
+          }
+
+          // React to any provided data before the scene starts
+          next->popDataHolder.exec();
+
           effect->onStart();
           effect->started = true;
           owner.activities.push(effect);
-
-          next->popDataHolder.resolve(std::forward<Args>(args)...);
 
           return true;
         }
@@ -592,7 +608,7 @@ namespace sw
 
     /**
       @brief Tries to pop the activity of the stack
-      @return true if we are able to pop, false if there are no more items on the stack or in the middle of a segue effect
+      @return boolean representing if the AC could safely pop or not
     */
     template<typename... Args>
     const bool pop(Args&&... args)
@@ -602,7 +618,16 @@ namespace sw
       if (!hasMore || segueAction != SegueAction::none)
         return false;
 
-      last->popDataHolder.resolve(std::forward<Args>(args)...);
+      // TODO: popping top() just to push top back on later is ugly.
+      // Perhaps consider a custom data structure now.
+      if (activities.size() > 1) {
+        sw::Activity* last = activities.top();
+        activities.pop();
+        sw::Activity* next = activities.top();
+        next->popDataHolder.resolve(std::forward<Args>(args)...);
+        activities.push(last);
+      }
+
       stackAction = StackAction::pop;
 
       return true;
@@ -654,8 +679,6 @@ namespace sw
       template <typename... Args>
       ResolveRewindSegueIntent(ActivityController &owner, Args &&...args)
       {
-        std::stack<Activity*> original;
-
         const bool hasLast = (owner.activities.size() > 0);
 
         if (!hasLast)
@@ -666,7 +689,10 @@ namespace sw
 
         SpinWhileTrue _(owner.hasPendingChanges);
 
-        Activity *next = owner.activities.top();
+        Activity* next = owner.activities.top();
+        Activity* last = next;
+
+        std::stack<Activity*> original;
 
         while (dynamic_cast<T*>(next) == 0 && owner.activities.size() > 1)
         {
@@ -688,13 +714,16 @@ namespace sw
           return;
         }
 
-        // User asked that data sent to us moves goes to the next activity
-        if (top->popData.adopted) {
-          next->popData.carry(top->popData);
+        // Fill our pop data holder with the event data, if any
+        next->popDataHolder.resolve(std::forward<Args>(args)...);
+
+        // User asked that data sent to us moves on with the next activity
+        if (last->popDataHolder.adopted) {
+          next->popDataHolder.carry(last->popDataHolder);
         }
 
-        next->popData.resolve(std::forward<Args>(args)...);
-        next->popData.exec();
+        // React to any provided data before the scene starts
+        next->popDataHolder.exec();
 
         // Cleanup memory
         while (original.size() > 0) {
@@ -704,7 +733,12 @@ namespace sw
           original.pop();
         }
 
-        next->onResume();
+        if (next->started) {
+          next->onResume();
+        }
+        else {
+          next->onStart();
+        }
       }
     };
 
@@ -939,15 +973,6 @@ namespace sw
         {
           activities.pop(); // remove last
         }
-        else if (segueAction == SegueAction::pop || segueAction == SegueAction::rewind) {
-          // User asked that data sent to us moves goes to the next activity
-          if (last->popDataHolder.adopted) {
-            next->popDataHolder.carry(last->popDataHolder);
-          }
-
-          // invokes callback fn passed in PopDataHolder::take(...)
-          next->popDataHolder.exec();
-        }
 
         delete last;
       }
@@ -963,7 +988,7 @@ namespace sw
     }
 
     /**
-       @brief When pop() is invoked, the pop is not executed immediately. It is defered until it is safe to pop the activity off the stack.
+       @brief pop() is defered until it is safe to pop the activity off the stack.
      */
     void executePop()
     {
@@ -974,17 +999,23 @@ namespace sw
       last->onEnd();
       activities.pop();
 
-      Activity* next = activities.top();
-
       if (activities.size() > 0) {
-        // User asked that data sent to us moves goes to the next activity
+        Activity* next = activities.top();
+
+        // User requested to have data move on with the next activity
         if (last->popDataHolder.adopted) {
           next->popDataHolder.carry(last->popDataHolder);
         }
 
         // Take pop result
        next->popDataHolder.exec();
-       next->onResume();
+
+       if (next->started) {
+         next->onResume();
+       }
+       else {
+         next->onStart();
+       }
       }
 
       delete last;
