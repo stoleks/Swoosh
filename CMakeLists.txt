@@ -1,8 +1,12 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(Swoosh-Demo)
-
-set (CMAKE_CXX_STANDARD 17)
+#
+project(Swoosh
+  VERSION 2.0.0
+  DESCRIPTION "Screen Transition Management Library Currently only for SFML."
+  LANGUAGES CXX
+)
+set (PROJECT_AUTHOR "TheMaverickProgrammer")
 
 include (FetchContent)
 FetchContent_Declare (SFML
@@ -14,28 +18,37 @@ FetchContent_Declare (SFML
 )
 FetchContent_MakeAvailable (SFML)
 
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Config.cmake)
+# Set Swoosh library
+add_library(${PROJECT_NAME} INTERFACE)
+add_library(Swoosh::${PROJECT_NAME} ALIAS Swoosh)
 
-file(GLOB SwooshFiles CONFIGURE_DEPENDS
-        "ExampleDemo/*.h"
-        "ExampleDemo/Scenes/*.h"
-        "ExampleDemo/*.cpp"
-        "ExampleDemp/Scenes/*.cpp"
-        )
+target_include_directories(${PROJECT_NAME} INTERFACE "${PROJECT_SOURCE_DIR}/src")
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
+# Build a library so that swoosh can be added like SFML
+set (LIBRARY_OUTPUT_PATH "${PROJECT_BINARY_DIR}/lib")
 
-add_executable(Demo ExampleDemo/Demo.cpp ${SwooshFiles})
+# Configuration
+target_compile_features(${PROJECT_NAME} INTERFACE cxx_std_17)
+# include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Config.cmake)
+
+# Remove use of glob and build library
+add_subdirectory (src)
+
+# Build demo
+add_executable(Demo ExampleDemo/Demo.cpp)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
 
-source_group(TREE ${PROJECT_SOURCE_DIR} FILES ${SwooshFiles})
-
-target_link_libraries(Demo SFML::Graphics SFML::Audio SFML::Network)
+target_link_libraries(Demo PRIVATE
+  SFML::Graphics
+  SFML::Audio
+  SFML::Network
+  Swoosh
+)
 
 set_target_properties(Demo
-    PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/build/$<CONFIG>"
+  PROPERTIES
+  RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/build/$<CONFIG>"
 )
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Compiler.cmake)
