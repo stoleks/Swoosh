@@ -50,8 +50,8 @@ public:
    
     sf::Sprite right(temp2);
 
-    left.setColor(sf::Color(255, 255, 255, (sf::Uint8)((1.0-alpha) * 255.0)));
-    right.setColor(sf::Color(255, 255, 255, (sf::Uint8)(alpha * 255.0)));
+    left.setColor(sf::Color(255, 255, 255, (std::uint8_t)((1.0-alpha) * 255.0)));
+    right.setColor(sf::Color(255, 255, 255, (std::uint8_t)(alpha * 255.0)));
 
     renderer.submit(Immediate(&left));
     renderer.submit(Immediate(&right));

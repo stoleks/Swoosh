@@ -64,7 +64,7 @@ public:
     }
 
     static sf::Sprite sprite(temp2); // dummy. we just need something with the screen size to draw with
-    renderer.submit(sprite, states);
+    renderer.submit(&sprite, states);
 
     firstPass = false;
   }
@@ -88,7 +88,7 @@ public:
         }
     );
 
-    shader.loadFromMemory(shaderProgram, sf::Shader::Fragment);
+    if (!shader.loadFromMemory(shaderProgram, sf::Shader::Type::Fragment)) {}
     shader.setUniform("power", wiggle_power);
   }
 

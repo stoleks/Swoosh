@@ -28,12 +28,12 @@ public:
     sf::Texture temp(renderer.getTexture()); // Make a copy of the source texture
 
     sf::Sprite top(temp); 
-    top.setTextureRect(sf::IntRect(0, 0, windowSize.x, (int)(windowSize.y / 2.0)));
-    top.setPosition(0.0f, (float)(-alpha * top.getTextureRect().height));
+    top.setTextureRect(sf::IntRect({0, 0}, {(int)windowSize.x, (int)(windowSize.y / 2.0)}));
+    top.setPosition({0.f, (float)(-alpha * top.getTextureRect().size.y)});
 
     sf::Sprite bottom(temp);
-    bottom.setTextureRect(sf::IntRect(0, (int)(windowSize.y / 2.0), windowSize.x, windowSize.y));
-    bottom.setPosition(0.0f, (float)(windowSize.y/2.0f) +  ((float)alpha * (bottom.getTextureRect().height-bottom.getTextureRect().top)));
+    bottom.setTextureRect(sf::IntRect({0, (int)(windowSize.y / 2.0)}, sf::Vector2i (windowSize)));
+    bottom.setPosition({0.f, (float)(windowSize.y/2.0f) +  ((float)alpha * (bottom.getTextureRect().size.y-bottom.getTextureRect().position.y))});
 
     renderer.clear();
 

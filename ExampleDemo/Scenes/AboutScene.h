@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../TextureLoader.h"
-#include "../Particle.h"
 #include "../Button.h"
 #include "../ResourcePaths.h"
 #include "../SaveFile.h"
@@ -13,6 +12,8 @@
 #include <Swoosh/Utils.h>
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
+
+#include <memory>
 #include <iostream>
 
 const char* TEXT_BLOCK_INFO = 
@@ -33,8 +34,8 @@ class AboutScene : public sw::Activity {
 private:
   sf::Texture * btn;
   sf::Texture * sfmlTexture;
-  sf::Sprite sfml;
-  button goback;
+  std::unique_ptr <sf::Sprite> sfml;
+  std::unique_ptr <button> goBack;
 
   sf::Font manual;
   sf::Font font;
@@ -53,24 +54,23 @@ private:
   bool inFocus;
   bool canClick;
 public:
-  AboutScene(sw::ActivityController& controller) : Activity(&controller) {
+  AboutScene(sw::ActivityController& controller) : Activity(&controller), text(font), selectFX (buffer) {
     canClick = false;
 
-    font.loadFromFile(GAME_FONT);
-    text.setFont(font);
+    if (!font.openFromFile(GAME_FONT)) {}
     text.setFillColor(sf::Color::White);
 
-    manual.loadFromFile(MANUAL_FONT);
+    if (!manual.openFromFile(MANUAL_FONT)) {}
 
     btn = loadTexture(BLUE_BTN_PATH);
-    goback.sprite = sf::Sprite(*btn);
-    goback.text = "Continue";
+    goBack = std::make_unique <button> (*btn);
+    goBack->text = "Continue";
     info = TEXT_BLOCK_INFO;
 
     sfmlTexture = loadTexture(SFML_PATH);
-    sfml = sf::Sprite(*sfmlTexture);
-    sfml.setScale(0.7f, 0.7f);
-    sw::setOrigin(sfml, 0.60f, 0.60f);
+    sfml = std::make_unique <sf::Sprite> (*sfmlTexture);
+    sfml->setScale({0.7f, 0.7f});
+    sw::setOrigin(*sfml, 0.60f, 0.60f);
 
     sf::Vector2u windowSize = getController().getVirtualWindowSize();
     setView(windowSize);
@@ -80,8 +80,7 @@ public:
     screenDiv = windowSize.y / 4.0f;
 
     // Load sounds
-    buffer.loadFromFile(SHIELD_UP_SFX_PATH);
-    selectFX.setBuffer(buffer);
+    if (!buffer.loadFromFile(SHIELD_UP_SFX_PATH)) {}
 
     inFocus = false;
 
@@ -102,17 +101,17 @@ public:
 
     sf::Vector2u windowSize = getController().getVirtualWindowSize();
 
-    sfml.setPosition(100.0f + (float)(offset * (windowSize.x - 300)), 100.0f);
-    sfml.setRotation((float)(offset * 360 * 2));
+    sfml->setPosition({100.0f + (float)(offset * (windowSize.x - 300)), 100.0f});
+    sfml->setRotation(sf::degrees(offset * 360 * 2));
 
-    goback.update(getController().getWindow());
+    goBack->update(getController().getWindow());
 
-    if (goback.isClicked && inFocus) {
+    if (goBack->isClicked && inFocus) {
       if (canClick) {
         canClick = false;
         selectFX.play();
 
-        if (goback.text == "FIN") {
+        if (goBack->text == "FIN") {
           struct Reason {
             std::string message;
           };
@@ -121,7 +120,7 @@ public:
           getController().pop<tx>(std::string("Goodbye from the AboutScene!"), false, 12);
         }
         else {
-          goback.text = "FIN";
+          goBack->text = "FIN";
           info = CONTROLS_INFO;
         }
       }
@@ -151,7 +150,7 @@ public:
     sf::RenderWindow& window = getController().getWindow();
 
     renderer.clear(sf::Color::Black);
-    renderer.submit(&sfml);
+    renderer.submit(sfml.get ());
 
     text.setFont(manual);
     text.setPosition(sf::Vector2f(screenMid, 200));
@@ -164,7 +163,7 @@ public:
     text.setFont(font);
     text.setFillColor(sf::Color::Black);
     sw::setOrigin(text, 0.5f, 0.5f);
-    goback.draw(renderer, text, screenMid, screenBottom - 40);
+    goBack->draw(renderer, text, screenMid, screenBottom - 40);
   }
 
   void onEnd() override {

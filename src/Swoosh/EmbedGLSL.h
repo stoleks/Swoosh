@@ -1,4 +1,5 @@
 #pragma once
+
 #include <sstream>
 
 /**
@@ -16,7 +17,6 @@
 #endif
 
 #if SWOOSH_GLSL_USE_SAFE
-#include <sstream>
 #include <cstring>
 #else
 #include <string.h>

@@ -11,9 +11,7 @@ namespace sw {
 
   public:
     SimpleRenderer(const sf::View view) {
-      const unsigned int ux = (unsigned int)view.getSize().x;
-      const unsigned int uy = (unsigned int)view.getSize().y;
-      surface.create(ux, uy);
+      if (!surface.resize (sf::Vector2u (view.getSize ()))) {}
     }
 
     SystemCompatibilityScore checkSystemCompatibility() const override {

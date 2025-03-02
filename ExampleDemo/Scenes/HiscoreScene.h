@@ -1,6 +1,5 @@
 #pragma once
 #include "../TextureLoader.h"
-#include "../Particle.h"
 #include "../Button.h"
 #include "../ResourcePaths.h"
 #include "../SaveFile.h"
@@ -20,8 +19,7 @@ class HiScoreScene : public sw::Activity {
 private:
   sf::Texture * meteorBig, * meteorMed, * meteorSmall, * meteorTiny, * btn;
 
-  std::vector<particle> meteors;
-  button goback;
+  std::unique_ptr<button> goBack;
 
   sf::Font   font;
   sf::Text   text;
@@ -40,7 +38,7 @@ private:
 public:
   SaveFile& saveFile;
 
-  HiScoreScene(sw::ActivityController& controller, SaveFile& save) : saveFile(save), Activity(&controller) {
+  HiScoreScene(sw::ActivityController& controller, SaveFile& save) : Activity(&controller), text (font), selectFX (buffer), saveFile(save) {
     // Proof that this is the same save file in memory as it is passed around the scenes
     std::cout << "savefile address is " << &save << std::endl;
 
@@ -48,13 +46,12 @@ public:
     auto windowSize = getController().getVirtualWindowSize();
     setView(windowSize);
 
-    font.loadFromFile(GAME_FONT);
-    text.setFont(font);
+    if (!font.openFromFile(GAME_FONT)) {}
     text.setFillColor(sf::Color::White);
 
     btn = loadTexture(BLUE_BTN_PATH);
-    goback.sprite = sf::Sprite(*btn);
-    goback.text = "Return";
+    goBack = std::make_unique <button> ((*btn));
+    goBack->text = "Return";
 
     meteorBig = loadTexture(METEOR_BIG_PATH);
     meteorMed = loadTexture(METEOR_MED_PATH);
@@ -74,8 +71,7 @@ public:
     scrollOffset = 0;
 
     // Load sounds
-    buffer.loadFromFile(SHIELD_UP_SFX_PATH);
-    selectFX.setBuffer(buffer);
+    if (buffer.loadFromFile(SHIELD_UP_SFX_PATH)) {}
 
     inFocus = false;
 
@@ -89,9 +85,9 @@ public:
   void onUpdate(double elapsed) override {
     waitTime.update(sf::seconds((float)elapsed));
 
-    goback.update(getController().getWindow());
+    goBack->update(getController().getWindow());
 
-    if (goback.isClicked && inFocus) {
+    if (goBack->isClicked && inFocus) {
       selectFX.play();
 
       // Rewind lets us pop back to a particular scene in our stack history
@@ -118,12 +114,6 @@ public:
       }
     }
 
-    for (auto& m : meteors) {
-      sf::Vector2f prevPos = m.pos;
-      m.pos += sf::Vector2f(m.speed.x * (float)elapsed, m.speed.y * (float)elapsed);
-      m.sprite.setPosition(m.pos);
-      m.sprite.setRotation(m.pos.x);
-    }
   }
 
   void onLeave() override {
@@ -134,43 +124,6 @@ public:
   }
 
   void onEnter() override {
-    for (int i = 50; i > 0; i--) {
-      int randNegativeX = rand() % 2 == 0 ? -1 : 1;
-      int randNegativeY = rand() % 2 == 0 ? -1 : 1;
-
-      int randSpeedX = rand() % 40;
-      randSpeedX *= randNegativeX;
-
-      int randSpeedY = rand() % 40;
-      randSpeedY *= randNegativeY;
-
-      particle p;
-
-      int randTexture = rand() % 4;
-
-      switch (randTexture) {
-      case 0:
-        p.sprite = sf::Sprite(*meteorBig);
-        break;
-      case 1:
-        p.sprite = sf::Sprite(*meteorMed);
-        break;
-      case 2:
-        p.sprite = sf::Sprite(*meteorSmall);
-        break;
-      default:
-        p.sprite = sf::Sprite(*meteorTiny);
-      }
-
-      p.pos = sf::Vector2f((float)(rand() % getController().getWindow().getSize().x), 
-        (float)(rand() % getController().getWindow().getSize().y));
-
-      p.sprite.setPosition(p.pos);
-      p.sprite.setRotation(p.pos.x);
-
-      p.speed = sf::Vector2f((float)randSpeedX, (float)randSpeedY);
-      meteors.push_back(p);
-    }
   }
 
   void onResume() override {
@@ -178,10 +131,6 @@ public:
 
   void onDraw(sw::IRenderer& renderer) override {
     sf::RenderWindow& window = getController().getWindow();
-
-    for (auto& m : meteors) {
-      renderer.submit(&m.sprite);
-    }
 
     text.setFillColor(sf::Color::Yellow);
     text.setPosition(sf::Vector2f(screenMid, 100));
@@ -207,7 +156,7 @@ public:
     }
 
     text.setFillColor(sf::Color::Black);
-    goback.draw(renderer, text, screenMid, screenBottom - 40);
+    goBack->draw(renderer, text, screenMid, screenBottom - 40);
   }
 
   void onEnd() override {

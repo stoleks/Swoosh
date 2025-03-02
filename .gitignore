@@ -388,3 +388,5 @@ _deps
 /*.sln
 /*.filters
 /log.txt
+
+*.sh

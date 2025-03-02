@@ -28,7 +28,7 @@ public:
 
     sf::RectangleShape whiteout;
     whiteout.setSize(sf::Vector2f((float)renderer.getTexture().getSize().x, (float)renderer.getTexture().getSize().y));
-    whiteout.setFillColor(sf::Color(0, 0, 0, (sf::Uint8)(alpha*255)));
+    whiteout.setFillColor(sf::Color(0, 0, 0, (std::uint8_t)(alpha*255)));
     renderer.submit(Immediate(&whiteout));
   }
 

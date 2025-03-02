@@ -1,11 +1,10 @@
 #pragma once
 
-#include "GameplayScene.h"
 #include "HiscoreScene.h"
 #include "AboutScene.h"
+#include "GamePlayScene.h"
 #include "../CustomRenderer.h"
 #include "../TextureLoader.h"
-#include "../Particle.h"
 #include "../Button.h"
 #include "../SaveFile.h"
 
@@ -59,8 +58,6 @@ private:
   sf::Texture* starTexture;
   sf::Texture* blueButton, *redButton, *greenButton;
 
-  sf::Sprite bg;
-
   sf::Font menuFont;
   sf::Text menuText;
 
@@ -68,7 +65,6 @@ private:
   sf::Sound selectFX;
   sf::Music themeMusic;
 
-  std::vector<particle> particles;
   std::vector<button> buttons;
 
   float screenMid;
@@ -79,7 +75,7 @@ private:
   SaveFile savefile;
 
 public:
-  MainMenuScene(sw::ActivityController& controller) : Activity(&controller) {
+  MainMenuScene(sw::ActivityController& controller) : Activity(&controller), menuText (menuFont), selectFX (buffer) {
     setView(controller.getVirtualWindowSize());
 
     savefile.loadFromFile(SAVE_FILE_PATH);
@@ -89,7 +85,6 @@ public:
 
     bgTexture = loadTexture(MENU_BG_PATH);
     bgNormal = loadTexture(MENU_BG_N_PATH);
-    bg = sf::Sprite(*bgTexture);
 
     starTexture = loadTexture(STAR_PATH);
 
@@ -97,16 +92,13 @@ public:
     redButton = loadTexture(RED_BTN_PATH);
     greenButton = loadTexture(GREEN_BTN_PATH);
 
-    menuFont.loadFromFile(GAME_FONT);
-
-    menuText.setFont(menuFont);
+    if (!menuFont.openFromFile(GAME_FONT)) {}
     menuText.setFillColor(sf::Color::White);
 
     screenMid = getController().getWindow().getSize().x / 2.0f;
 
     // Create the buttons
-    button menuOption;
-    menuOption.sprite.setTexture(*greenButton);
+    button menuOption (*greenButton);
     menuOption.text = PLAY_OPTION;
     buttons.push_back(menuOption);
 
@@ -123,9 +115,8 @@ public:
     buttons.push_back(menuOption);
 
     // Load sounds
-    buffer.loadFromFile(SHIELD_UP_SFX_PATH);
-    selectFX.setBuffer(buffer);
-    themeMusic.openFromFile(THEME_MUSIC_PATH);
+    if (!buffer.loadFromFile(SHIELD_UP_SFX_PATH)) {}
+    if (!themeMusic.openFromFile(THEME_MUSIC_PATH)) {}
 
     timer.start();
 
@@ -144,32 +135,6 @@ public:
       themeMusic.setVolume(themeMusic.getVolume() * 0.98f); // fades out the music
     }
 
-    int i = 0;
-    for (auto& p : particles) {
-      p.speed = sf::Vector2f(p.speed.x * p.friction.x, p.speed.y * p.friction.y);
-      p.pos += sf::Vector2f(p.speed.x * (float)elapsed, p.speed.y * (float)elapsed);
-
-      p.sprite.setPosition(p.pos);
-      p.sprite.setScale(
-        2.0f*float(p.life / p.lifetime), 
-        2.0f*float(p.life / p.lifetime)
-      );
-
-      sf::Color color = p.sprite.getColor();
-      color.a = (sf::Uint8)(255.0 * (p.life / p.lifetime));
-
-      p.sprite.setColor(color);
-
-      p.life -= elapsed;
-
-      if (p.life <= 0) {
-        particles.erase(particles.begin() + i);
-        continue;
-      }
-
-      i++;
-    }
-
     for (auto& b : buttons) {
       b.update(getController().getWindow());
 
@@ -180,7 +145,6 @@ public:
           using fx = sw::segue<HorizontalOpen>;
           using tx = fx::to<GameplayScene>;
           getController().push<tx>(savefile);
-
           fadeMusic = true;
         }
         else if (b.text == SCORE_OPTION) {
@@ -250,39 +214,13 @@ public:
     fadeMusic = false;
 
     std::cout << "MainMenuScene OnResume called" << std::endl;
-
-    for (int i = 50; i > 0; i--) {
-      int randNegative = rand() % 2 == 0 ? -1 : 1;
-      int randSpeedX = rand() % 80;
-      randSpeedX *= randNegative;
-      int randSpeedY = rand() % 220;
-
-      particle p;
-      p.sprite = sf::Sprite(*starTexture);
-      p.pos = sf::Vector2f(
-        (float)(rand() % getController().getVirtualWindowSize().x), 
-        (float)(getController().getVirtualWindowSize().y)
-      );
-      p.speed = sf::Vector2f((float)randSpeedX, (float)-randSpeedY);
-      p.friction = sf::Vector2f(0.99999f, 0.9999f);
-      p.life = 3.0;
-      p.lifetime = 3.0;
-      p.sprite.setPosition(p.pos);
-      sw::setOrigin(p.sprite, 0.5, 0.5);
-
-      particles.push_back(p);
-    }
   }
 
   void onDraw(sw::IRenderer& renderer) override {
-    const bool isCustomRenderer =
-      getController().getActiveRenderEntry().getName() == "custom";
+    const bool isCustomRenderer = getController().getActiveRenderEntry().getName() == "custom";
 
+    auto bg = sf::Sprite (*bgTexture);
     renderer.submit(Draw3D(&bg, bgNormal));
-
-    for (auto& p : particles) {
-      renderer.submit(&p.sprite);
-    }
 
     int i = 0;
     menuText.setFillColor(sf::Color::Black);
@@ -299,7 +237,7 @@ public:
     menuText.setPosition(sf::Vector2f(screenMid-30.f, 100));
 
     // Get the global bounds information from that to pick out
-    double startX = menuText.getGlobalBounds().left;
+    double startX = menuText.getGlobalBounds().position.x;
     double offset = 0;
 
     // For each letter in the string, make it jump while preserving placement
@@ -323,7 +261,7 @@ public:
 
       // We want at max 24.f units of space inbetween letters
       // Everything else can be smaller
-      offset += std::fminf(menuText.getGlobalBounds().width + letterSpacing, 24.f);
+      offset += std::fminf(menuText.getGlobalBounds().size.x + letterSpacing, 24.f);
 
       // Include spaces
       if (menuText.getString() == ' ') { offset += menuText.getCharacterSize(); }
@@ -332,11 +270,9 @@ public:
       renderer.submit(sw::Clone(menuText));
 
       if (isCustomRenderer) {
-
-        sf::Uint8 r = sf::Uint8(((sin(frequency * i + 2 + dt) + 1.0) / 2.0) * 255U);
-        sf::Uint8 g = sf::Uint8(((sin(frequency * i + 0 + dt) + 1.0) / 2.0) * 255U);
-        sf::Uint8 b = sf::Uint8(((sin(frequency * i + 4 + dt) + 1.0) / 2.0) * 255U);
-
+        auto r = std::uint8_t(((sin(frequency * i + 2 + dt) + 1.0) / 2.0) * 255U);
+        auto g = std::uint8_t(((sin(frequency * i + 0 + dt) + 1.0) / 2.0) * 255U);
+        auto b = std::uint8_t(((sin(frequency * i + 4 + dt) + 1.0) / 2.0) * 255U);
         renderer.submit(Light(160.0, WithZ(menuText.getPosition(), 50.0f), sf::Color(r, g, b, 255), 0.1f));
       }
     }
@@ -344,19 +280,10 @@ public:
 
   void onEnd() override {
     std::cout << "MainMenuScene OnEnd called" << std::endl;
-
-    while (!particles.empty()) {
-      particles.erase(particles.begin());
-    }
   }
 
   ~MainMenuScene() {
     delete bgTexture;
-
-    while (!particles.empty()) {
-      particles.erase(particles.begin());
-    }
-
     delete starTexture;
     delete blueButton;
     delete greenButton;

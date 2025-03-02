@@ -2,7 +2,7 @@
 #include <SFML/Graphics.hpp>
 
 struct particle {
-  sf::Sprite sprite;
+  std::unique_ptr <sf::Sprite> sprite;
   sf::Vector2f pos;
   sf::Vector2f speed;
   sf::Vector2f friction;
@@ -16,11 +16,23 @@ struct particle {
   }
 
   particle(const particle& rhs) {
-    sprite = rhs.sprite;
+    sprite = std::make_unique <sf::Sprite> (rhs.sprite->getTexture ());
+    *sprite = *rhs.sprite;
     pos = rhs.pos;
     speed = rhs.speed;
     friction = rhs.friction;
     life = rhs.life;
     lifetime = rhs.lifetime;
+  }
+
+  particle operator= (const particle& rhs) {
+    sprite = std::make_unique <sf::Sprite> (rhs.sprite->getTexture ());
+    *sprite = *rhs.sprite;
+    pos = rhs.pos;
+    speed = rhs.speed;
+    friction = rhs.friction;
+    life = rhs.life;
+    lifetime = rhs.lifetime;
+    return *this;
   }
 };

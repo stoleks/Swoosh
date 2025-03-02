@@ -32,10 +32,10 @@ public:
     int lr = 0;
     int ud = 0;
 
-    if (direction == direction::left ) lr = -1;
-    if (direction == direction::right) lr = 1;
-    if (direction == direction::up   ) ud = -1;
-    if (direction == direction::down ) ud = 1;
+    if (direction == arg::direction::left ) lr = -1;
+    if (direction == arg::direction::right) lr = 1;
+    if (direction == arg::direction::up   ) ud = -1;
+    if (direction == arg::direction::down ) ud = 1;
 
     renderer.clear();
 
@@ -45,7 +45,7 @@ public:
     sf::Texture temp2(renderer.getTexture());
     sf::Sprite right(temp2);
 
-    right.setPosition((float)-lr * (1.0f-(float)alpha) * right.getTexture()->getSize().x, (float)-ud * (1.0f-(float)alpha) * right.getTexture()->getSize().y);
+    right.setPosition({(float)-lr * (1.0f-(float)alpha) * right.getTexture().getSize().x, (float)-ud * (1.0f-(float)alpha) * right.getTexture ().getSize().y});
 
     renderer.submit(Immediate(&left));
     renderer.submit(Immediate(&right));

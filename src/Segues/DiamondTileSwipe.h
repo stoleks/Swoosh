@@ -118,7 +118,7 @@ public:
       }
     );
 
-    shader.loadFromMemory(diamondSwipeShaderProgram, sf::Shader::Fragment);
+    if (!shader.loadFromMemory(diamondSwipeShaderProgram, sf::Shader::Type::Fragment)) {}
   }
 
   ~DiamondTileSwipe() { }

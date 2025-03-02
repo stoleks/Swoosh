@@ -39,8 +39,8 @@ public:
 
     sf::Sprite left(temp); 
     sw::setOrigin(left, 0.5f, 0.5f);
-    left.setPosition((float)(windowSize.x/2.0f), (float)(windowSize.y/2.0f));
-    left.setScale((float)alpha, (float)alpha);
+    left.setPosition({(float)(windowSize.x/2.0f), (float)(windowSize.y/2.0f)});
+    left.setScale((float)alpha * sf::Vector2f(1.f, 1.f));
 
     renderer.clear();
 

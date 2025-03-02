@@ -9,7 +9,7 @@
 
 int main()
 {
-  sf::RenderWindow window(sf::VideoMode(800, 600), "Swoosh Demo");
+  sf::RenderWindow window(sf::VideoMode({800, 600}), "Swoosh Demo");
   window.setFramerateLimit(60); // call this once, after creating the window
   window.setVerticalSyncEnabled(true);
   window.setMouseCursorVisible(false);
@@ -75,9 +75,7 @@ int main()
   // app.push<MainMenuScene>(); // uncomment this and comment the line above for old behavior
 
   sf::Texture* cursorTexture = loadTexture(CURSOR_PATH);
-  sf::Sprite cursor;
-
-  cursor.setTexture(*cursorTexture);
+  sf::Sprite cursor(*cursorTexture);
 
   // run the program as long as the window is open
   float elapsed = 0.0f;
@@ -91,26 +89,24 @@ int main()
     clock.restart();
 
     // check all the window's events that were triggered since the last iteration of the loop
-    sf::Event event;
-    while (window.pollEvent(event))
+    while (const auto event = window.pollEvent ())
     {
       // "close requested" event: we close the window
-      if (event.type == sf::Event::Closed) {
+      if (event->is <sf::Event::Closed> ()) {
         window.close();
-      } else if (event.type == sf::Event::LostFocus) {
+      } else if (event->is <sf::Event::FocusLost> ()) {
         pause = true;
       }
-      else if (event.type == sf::Event::GainedFocus) {
+      else if (event->is <sf::Event::FocusGained> ()) {
         pause = false;
       }
-      else if (event.type == sf::Event::KeyPressed) {
+      else if (const auto* keyPressed = event->getIf<sf::Event::KeyPressed> ()) {
         // Toggle to different renderers using F-keys
-        sf::Keyboard::Key code = event.key.code;
-        if (code == sf::Keyboard::F1 && app.activateRenderEntry(0)) {
+        if (keyPressed->code == sf::Keyboard::Key::F1 && app.activateRenderEntry(0)) {
           const std::string& name = app.getActiveRenderEntry().getName();
           window.setTitle("Swoosh Demo (renderer=" + name + ")");
         }
-        else if (code == sf::Keyboard::F2 && app.activateRenderEntry(1)) {
+        else if (keyPressed->code == sf::Keyboard::Key::F2 && app.activateRenderEntry(1)) {
           const std::string& name = app.getActiveRenderEntry().getName();
           window.setTitle("Swoosh Demo (renderer=" + name + ")");
         }

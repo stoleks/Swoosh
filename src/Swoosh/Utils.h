@@ -9,13 +9,13 @@ namespace sw {
   static bool doesCollide(sf::Sprite& a, sf::Sprite& b) {
     double mx = a.getPosition().x;
     double my = a.getPosition().y;
-    double mw = a.getGlobalBounds().width;
-    double mh = a.getGlobalBounds().height;
+    double mw = a.getGlobalBounds().size.x;
+    double mh = a.getGlobalBounds().size.y;
 
     double mx2 = b.getPosition().x;
     double my2 = b.getPosition().y;
-    double mw2 = b.getGlobalBounds().width;
-    double mh2 = b.getGlobalBounds().height;
+    double mw2 = b.getGlobalBounds().size.x;
+    double mh2 = b.getGlobalBounds().size.y;
 
     return (mx < mx2 + mw2 && mx + mw > mx2 && my < my2 + mh2 && my + mh > my2);
   }
@@ -52,15 +52,15 @@ namespace sw {
 
   static void setOrigin(sf::Sprite& sprite, double fx, double fy) {
     sprite.setOrigin(
-      sf::Vector2f(sprite.getLocalBounds().width * (float)fx, 
-        sprite.getLocalBounds().height * (float)fy)
+      sf::Vector2f(sprite.getLocalBounds().size.x * (float)fx, 
+        sprite.getLocalBounds().size.y * (float)fy)
     );
   }
 
   static void setOrigin(sf::Text& text, double fx, double fy) {
     text.setOrigin(
-      sf::Vector2f(text.getLocalBounds().width * (float)fx,
-        text.getLocalBounds().height * (float)fy)
+      sf::Vector2f(text.getLocalBounds().size.x * (float)fx,
+        text.getLocalBounds().size.y * (float)fy)
     );
   }
 }

@@ -58,8 +58,7 @@ namespace sw {
         sf::RenderStates states;
         states.shader = &shader;
 
-        sf::Sprite sprite;
-        sprite.setTexture(*texture);
+        sf::Sprite sprite (*texture);
 
         renderer.submit(Immediate(&sprite, states));
       }
@@ -126,7 +125,7 @@ namespace sw {
         size_t start_pos = this->FAST_BLUR_SHADER.find(from);
         if (start_pos != std::string::npos) {
           this->FAST_BLUR_SHADER.replace(start_pos, from.length(), to);
-          shader.loadFromMemory(this->FAST_BLUR_SHADER, sf::Shader::Fragment);
+          if (!shader.loadFromMemory(this->FAST_BLUR_SHADER, sf::Shader::Type::Fragment)) {}
         }
         else {
           // should never happen
@@ -165,8 +164,7 @@ namespace sw {
         sf::RenderStates states;
         states.shader = &shader;
 
-        sf::Sprite sprite;
-        sprite.setTexture(*texture1);
+        sf::Sprite sprite (*texture1);
 
         renderer.submit(Immediate(&sprite, states));
       }
@@ -200,7 +198,7 @@ namespace sw {
           }
         );
 
-        shader.loadFromMemory(this->CHECKERBOARD_SHADER, sf::Shader::Fragment);
+        if (!shader.loadFromMemory(this->CHECKERBOARD_SHADER, sf::Shader::Type::Fragment)) {}
       }
 
       ~Checkerboard() { ; }
@@ -228,8 +226,7 @@ namespace sw {
         sf::RenderStates states;
         states.shader = &shader;
 
-        sf::Sprite sprite;
-        sprite.setTexture(*texture);
+        sf::Sprite sprite (*texture);
 
         renderer.submit(Immediate(&sprite, states));
       }
@@ -268,7 +265,7 @@ namespace sw {
 
         texture = nullptr;
         alpha = 0;
-        shader.loadFromMemory(this->CIRCLE_MASK_SHADER, sf::Shader::Fragment);
+        if (!shader.loadFromMemory(this->CIRCLE_MASK_SHADER, sf::Shader::Type::Fragment)) {}
       }
 
       ~CircleMask() { ; }
@@ -294,8 +291,7 @@ namespace sw {
         sf::RenderStates states;
         states.shader = &shader;
 
-        sf::Sprite sprite;
-        sprite.setTexture(*texture);
+        sf::Sprite sprite (*texture);
 
         renderer.submit(Immediate(&sprite, states));
       }
@@ -319,7 +315,7 @@ namespace sw {
           }
         );
 
-        shader.loadFromMemory(this->RETRO_BLIT_SHADER, sf::Shader::Fragment);
+        if (!shader.loadFromMemory(this->RETRO_BLIT_SHADER, sf::Shader::Type::Fragment)) {}
 
         texture = nullptr;
         alpha = 0;
@@ -352,8 +348,7 @@ namespace sw {
         sf::RenderStates states;
         states.shader = &shader;
 
-        sf::Sprite sprite;
-        sprite.setTexture(*texture1);
+        sf::Sprite sprite (*texture1);
 
         renderer.submit(Immediate(&sprite, states));
       }
@@ -438,7 +433,7 @@ namespace sw {
             }
         );
 
-        shader.loadFromMemory(this->CROSS_ZOOM_SHADER, sf::Shader::Fragment);
+        if (!shader.loadFromMemory(this->CROSS_ZOOM_SHADER, sf::Shader::Type::Fragment)) {}
       }
 
       ~CrossZoom() { }
@@ -467,8 +462,7 @@ namespace sw {
         sf::RenderStates states;
         states.shader = &shader;
 
-        sf::Sprite sprite;
-        sprite.setTexture(*texture1);
+        sf::Sprite sprite (*texture1);
 
         renderer.submit(Immediate(&sprite, states));
       }
@@ -498,7 +492,7 @@ namespace sw {
           }
         );
 
-        shader.loadFromMemory(this->MORPH_SHADER, sf::Shader::Fragment);
+        if (!shader.loadFromMemory(this->MORPH_SHADER, sf::Shader::Type::Fragment)) {}
 
         texture1 = texture2 = nullptr;
         alpha = strength = 0;
@@ -688,7 +682,7 @@ namespace sw {
           }
         );
 
-        shader.loadFromMemory(this->TURN_PAGE_VERT_SHADER, this->TURN_PAGE_FRAG_SHADER);
+        if (!shader.loadFromMemory(this->TURN_PAGE_VERT_SHADER, this->TURN_PAGE_FRAG_SHADER)) {}
         triangleStripulate((int)size.x, (int)size.y, buffer, cellSize);
       }
 
@@ -712,8 +706,7 @@ namespace sw {
         sf::RenderStates states;
         states.shader = &shader;
 
-        sf::Sprite sprite;
-        sprite.setTexture(*this->texture);
+        sf::Sprite sprite(*this->texture);
 
         renderer.submit(Immediate(&sprite, states));
       }
@@ -738,7 +731,7 @@ namespace sw {
           }
         );
 
-        shader.loadFromMemory(this->PIXELATE_SHADER, sf::Shader::Fragment);
+        if (!shader.loadFromMemory(this->PIXELATE_SHADER, sf::Shader::Type::Fragment)) {}
       }
 
       ~Pixelate() {}
@@ -762,8 +755,7 @@ namespace sw {
         sf::RenderStates states;
         states.shader = &shader;
 
-        sf::Sprite sprite;
-        sprite.setTexture(*texture1);
+        sf::Sprite sprite (*texture1);
 
         renderer.submit(Immediate(&sprite, states));
       }
@@ -796,7 +788,7 @@ namespace sw {
           }
         );
 
-        shader.loadFromMemory(this->RADIAL_CCW_SHADER, sf::Shader::Fragment);
+        if (!shader.loadFromMemory(this->RADIAL_CCW_SHADER, sf::Shader::Type::Fragment)) {}
       }
 
       ~RadialCCW() { ; }
@@ -841,7 +833,7 @@ namespace sw {
 
           sf::Sprite& sprite = *meshData.sprite;
           shader.setUniform("normal", sf::Shader::CurrentTexture);
-          shader.setUniform("rotation", sprite.getRotation());
+          shader.setUniform("rotation", sprite.getRotation().asDegrees ());
 
           // draw the albedo/diffuse pass (normal sprite)
           diffuse->draw(sprite);
@@ -849,7 +841,7 @@ namespace sw {
           // next, draw the normals
 
           // store the original texture in temp
-          const sf::Texture* temp = sprite.getTexture();
+          const sf::Texture& temp = sprite.getTexture();
           // use the normal texture and draw
           sprite.setTexture(*meshData.normal);
 
@@ -863,7 +855,7 @@ namespace sw {
           }
 
           // restore original texture
-          sprite.setTexture(*temp);
+          sprite.setTexture(temp);
         }
 
         void configure(sf::RenderTexture* diffuseIn, sf::RenderTexture* normalIn, sf::RenderTexture* esmIn) {
@@ -899,7 +891,7 @@ namespace sw {
             }
           );
 
-          shader.loadFromMemory(SHADER_FRAG, sf::Shader::Fragment);
+          if (!shader.loadFromMemory(SHADER_FRAG, sf::Shader::Type::Fragment)) {}
         }
 
         ~MeshPass() { ; }
@@ -918,6 +910,7 @@ namespace sw {
           float cutoff{};
         };
 
+        sf::Texture outTexture;
         std::list<light_t> lights;
 
       public:
@@ -928,10 +921,10 @@ namespace sw {
           normal->display();
           esm->display();
           position->display();
-          const sf::Texture texDiffuse = diffuse->getTexture();
-          const sf::Texture texNormal = normal->getTexture();
-          const sf::Texture texESM = esm->getTexture();
-          const sf::Texture texPosition = position->getTexture();
+          const sf::Texture& texDiffuse = diffuse->getTexture();
+          const sf::Texture& texNormal = normal->getTexture();
+          const sf::Texture& texESM = esm->getTexture();
+          const sf::Texture& texPosition = position->getTexture();
 
           // prepare the renderer for drawing
           renderer.clear();
@@ -952,9 +945,8 @@ namespace sw {
             shader.setUniform("lightCutoff", light.cutoff);
 
             renderer.display();
-            const sf::Texture out = renderer.getTexture();
-
-            sf::Sprite temp(out);
+            outTexture = renderer.getTexture ();
+            sf::Sprite temp(outTexture);
             renderer.submit(Immediate(&temp, states));
           }
         }
@@ -1052,7 +1044,7 @@ namespace sw {
             }
           );
 
-          shader.loadFromMemory(SHADER_FRAG, sf::Shader::Fragment);
+          if (!shader.loadFromMemory(SHADER_FRAG, sf::Shader::Type::Fragment)) {}
         }
 
         ~LightPass() { ; }
@@ -1074,7 +1066,7 @@ namespace sw {
           shader.setUniform("diffuse", diffuse);
 
           renderer.display();
-          const sf::Texture out = renderer.getTexture();
+          const sf::Texture& out = renderer.getTexture();
 
           sf::Sprite temp(out);
           renderer.submit(Immediate(&temp, states));
@@ -1102,7 +1094,7 @@ namespace sw {
             }
           );
 
-          shader.loadFromMemory(SHADER_FRAG, sf::Shader::Fragment);
+          if (!shader.loadFromMemory(SHADER_FRAG, sf::Shader::Type::Fragment)) {}
         }
 
         ~EmissivePass() { ; }
@@ -1172,7 +1164,7 @@ namespace sw {
             }
           );
 
-          shader.loadFromMemory(SHADER_FRAG, sf::Shader::Fragment);
+          if (shader.loadFromMemory(SHADER_FRAG, sf::Shader::Type::Fragment)) {}
         }
 
         ~PositionPass() { ; }

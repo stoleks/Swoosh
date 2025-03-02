@@ -1,12 +1,17 @@
 #pragma once
+
 #include <Swoosh/Activity.h>
 #include <Swoosh/Segue.h>
 #include <Swoosh/Timer.h>
 #include <Swoosh/Renderers/Renderer.h>
-#include <SFML/Graphics.hpp>
+
+#include <SFML/Graphics/RenderTexture.hpp>
+#include <SFML/Graphics/RenderWindow.hpp>
+
 #include <stack>
 #include <list>
 #include <utility>
+#include <cstdint>
 #include <cstddef>
 #include <assert.h>
 
@@ -309,7 +314,7 @@ namespace sw
 
         Segue *effect = new T(DurationType::value(), last, next);
         sf::Vector2u windowSize = owner.getVirtualWindowSize();
-        sf::View view(sf::FloatRect(0, 0, (float)windowSize.x, (float)windowSize.y));
+        sf::View view(sf::FloatRect({0.f, 0.f}, {(float)windowSize.x, (float)windowSize.y}));
         effect->setView(view);
 
         effect->setActivityViewFunc = &ActivityController::setActivityView;
@@ -348,7 +353,7 @@ namespace sw
 
           Segue *effect = new T(DurationType::value(), last, next);
           sf::Vector2u windowSize = owner.getVirtualWindowSize();
-          sf::View view(sf::FloatRect(0.f, 0.f, (float)windowSize.x, (float)windowSize.y));
+          sf::View view(sf::FloatRect({0.f, 0.f}, {(float)windowSize.x, (float)windowSize.y}));
           effect->setView(view);
 
           effect->setActivityViewFunc = &ActivityController::setActivityView;
@@ -425,7 +430,7 @@ namespace sw
 
           Segue *effect = new T(DurationType::value(), last, next);
           sf::Vector2u windowSize = owner.getVirtualWindowSize();
-          sf::View view(sf::FloatRect(0.0f, 0.0f, (float)windowSize.x, (float)windowSize.y));
+          sf::View view(sf::FloatRect({0.f, 0.f}, {(float)windowSize.x, (float)windowSize.y}));
           effect->setView(view);
 
           effect->setActivityViewFunc = &ActivityController::setActivityView;
@@ -1090,39 +1095,29 @@ namespace sw
 
       // get all original view and viewport settings
       auto& view = window.getView();
-      auto& viewSize = view.getSize();
-      auto& viewportIntRect = window.getViewport(view);
+      auto viewSize = view.getSize();
+      auto viewportIntRect = window.getViewport(view);
 
       // calculate the view based on any viewport adjustments
       // because we will copy the viewport pixels and we don't want those in our re-rendered image
-      sf::View newView = sf::View(
-        sf::FloatRect(
-          (float)viewportIntRect.left, 
-          (float)viewportIntRect.top, 
-          (float)viewportIntRect.width, 
-          (float)viewportIntRect.height
-        )
+      auto newView = sf::View(
+        sf::FloatRect (sf::Vector2f (viewportIntRect.position), sf::Vector2f (viewportIntRect.size))
       );
 
-      // screen size in pixels
-      sf::Vector2u windowSize = window.getSize();
-      float w = (float)windowSize.x;
-      float h = (float)windowSize.y;
-
       // copy screen contents
-      framebuffer.create((unsigned int)w, (unsigned int)h);
-      framebuffer.update(window);
-      drawable.setTexture(framebuffer, true);
+      if (!framebuffer.resize (window.getSize ())) {}
+      framebuffer.update (window);
+      drawable.setTexture (framebuffer, true);
 
       // Use the view that cleanly renders the copied screen (as if a viewport never existed)
-      setView(newView);
+      setView (newView);
 
       // flag screen copy op as complete
       captured = true;
     }
 
   public:
-    CopyWindow(ActivityController &ac) : Activity(&ac)
+    CopyWindow(ActivityController &ac) : Activity(&ac), drawable (framebuffer)
     {
       captured = false;
     }
@@ -1167,13 +1162,13 @@ namespace sw
       static sf::Time value() { return sf::seconds(val); }
     };
 
-    template <sf::Int32 val = 0>
+    template <std::int32_t val = 0>
     struct milliseconds
     {
       static sf::Time value() { return sf::milliseconds(val); }
     };
 
-    template <sf::Int64 val = 0>
+    template <std::int64_t val = 0>
     struct microseconds
     {
       static sf::Time value() { return sf::microseconds(val); }
@@ -1185,10 +1180,10 @@ namespace sw
     template <int val = 0>
     using sec = seconds<val>;
 
-    template <sf::Int32 val = 0>
+    template <std::int32_t val = 0>
     using milli = milliseconds<val>;
 
-    template <sf::Int64 val = 0>
+    template <std::int64_t val = 0>
     using micro = microseconds<val>;
   }
 

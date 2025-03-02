@@ -90,7 +90,7 @@ public:
       }
     );
  
-    shader.loadFromMemory(zoomShaderProgram, sf::Shader::Fragment);
+    if (!shader.loadFromMemory(zoomShaderProgram, sf::Shader::Type::Fragment)) {}
   }
 
   ~ZoomFadeIn() { ; }

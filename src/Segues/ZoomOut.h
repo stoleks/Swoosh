@@ -38,8 +38,8 @@ public:
 
     sf::Sprite left(temp); 
     sw::setOrigin(left, 0.5f, 0.5f);
-    left.setPosition(windowSize.x/2.0f, windowSize.y/2.0f);
-    left.setScale((float)alpha, (float)alpha);
+    left.setPosition({windowSize.x/2.0f, windowSize.y/2.0f});
+    left.setScale({(float)alpha, (float)alpha});
 
     renderer.clear();
 

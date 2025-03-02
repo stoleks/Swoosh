@@ -24,16 +24,15 @@ private:
 
   bool inFocus;
 public:
-  IntroScene(sw::ActivityController& controller) : Activity(&controller) {
-    font.loadFromFile(GAME_FONT);
-    text.setFont(font);
+  IntroScene(sw::ActivityController& controller) : Activity(&controller), text (font) {
+    if (!font.openFromFile(GAME_FONT)) {}
     text.setString(LOADING);
     text.setFillColor(sf::Color::White);
     sw::setOrigin(text, 0.5f, 0.5f);
 
     sf::Vector2u windowSize = getController().getVirtualWindowSize();
     setView(windowSize);
-    text.setPosition(windowSize.x * 0.5f, windowSize.y * 0.5f);
+    text.setPosition({windowSize.x * 0.5f, windowSize.y * 0.5f});
 
     inFocus = false;
     timer.start();
@@ -53,7 +52,7 @@ public:
 
       auto onReturn = [](sw::Context& context) {
         // We can check for previous contexts which were adopted
-        auto& prev = context.previous();
+        auto prev = context.previous();
         if (!prev.has_value()) return;
 
         sw::Context& prevContext = prev.value();
@@ -63,6 +62,7 @@ public:
         std::cout << str << ", " << b << ", " << i << std::endl;
 
       };
+      std::cout << "Pushing MainMenuScene\n";
       getController()
         .push<tx>()
         .take(onReturn);
@@ -87,7 +87,6 @@ public:
   }
 
   void onDraw(sw::IRenderer& renderer) override {
-
     renderer.clear(sf::Color::Black);
     renderer.submit(sw::Immediate(&text));
   }

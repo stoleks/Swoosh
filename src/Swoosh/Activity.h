@@ -1,6 +1,12 @@
 #pragma once
+
 #include <Swoosh/Renderers/Renderer.h>
-#include <SFML/Graphics.hpp>
+
+#include <SFML/Graphics/View.hpp>
+#include <SFML/Graphics/Rect.hpp>
+#include <SFML/Graphics/Color.hpp>
+#include <SFML/Graphics/RenderTexture.hpp>
+
 #include <functional>
 #include <optional>
 #include <tuple>
@@ -13,8 +19,8 @@ namespace sw {
   class PopDataHolder;
   class Context;
 
-  namespace {
-      // FOR INTERNAL USE ONLY.
+  namespace Impl {
+    // FOR INTERNAL USE ONLY.
     // 
     // This utility class is used to manage the data stored in the Context.
     // Data stored must be copyable otherwise the compiler will abort.
@@ -26,7 +32,7 @@ namespace sw {
     //
     // The data in Bucket cleans up after itself.
     class Bucket {
-      friend class Context;
+      friend class sw::Context;
 
       void (*deleter)(void*) { nullptr };
       void* data{ nullptr };
@@ -145,7 +151,7 @@ namespace sw {
         cleanup();
       }
     };
-  }
+  } // namespace Impl
 
   /**
   * @class Context
@@ -154,7 +160,7 @@ namespace sw {
   class Context {
     friend class PopDataHolder;
     Context* adopted{ nullptr };
-    Bucket mem{};
+    Impl::Bucket mem{};
 
     void adopt(Context&& other) {
       adopted = new Context(std::move(other));
@@ -331,8 +337,8 @@ namespace sw {
     virtual void onDraw(IRenderer& renderer) = 0;
     virtual ~Activity() { }
     void setView(const sf::View& view) { this->view = view; }
-    void setView(const sf::Vector2u& size) { view = sf::View(sf::FloatRect(0.0f, 0.0f, (float)size.x, (float)size.y)); }
-    void setView(const sf::FloatRect& rect) { view = sf::View(rect); }
+    void setView(const sf::Vector2u& size) { view = sf::View (sf::FloatRect ({0.0f, 0.0f}, sf::Vector2f (size))); }
+    void setView(const sf::FloatRect& rect) { view = sf::View (rect); }
     void setBGColor(const sf::Color color) { bgColor = color;  }
     const sf::View getView() const { return view; }
     const sf::Color getBGColor() const { return bgColor; }

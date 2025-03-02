@@ -1,6 +1,9 @@
 #pragma once
+
 #include <Swoosh/Events/Events.h>
+
 #include <SFML/Graphics.hpp>
+
 #include <assert.h>
 #include <functional>
 #include <list>
@@ -304,7 +307,7 @@ namespace sw {
       @brief forwards the broadcasted render event to through the ISubscriber<> implementation
     */
     void broadcast(const char* name, void* src, bool is_base) override {
-      redirect(name, src, is_base);
+      this->redirect(name, src, is_base);
     }
 
     /**
@@ -312,7 +315,7 @@ namespace sw {
     */
     void onEvent(const ClonedSource& event) override {
       ClonedSource& ref = clonedMem.emplace_back(std::move(event));
-      redirect(ref.name, ref.mem, true);
+      this->redirect(ref.name, ref.mem, true);
     }
 
     /**
@@ -345,7 +348,8 @@ namespace sw {
     */
     SystemCompatibilityScore getSystemCompatibilityScore() {
       if (cachedScore.has_value()) return *cachedScore;
-      cachedScore.reset(checkSystemCompatibility());
+      cachedScore.reset();
+      checkSystemCompatibility();
     }
   };
 

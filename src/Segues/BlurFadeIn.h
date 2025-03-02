@@ -82,15 +82,13 @@ public:
     renderer.display();
     temp2 = sf::Texture(renderer.getTexture());
 
-    static sf::Sprite sprite, sprite2;
-    sprite.setTexture(temp);
-    sprite2.setTexture(temp2);
+    static sf::Sprite sprite (temp), sprite2 (temp2);
 
     renderer.clear(sf::Color::Transparent);
     alpha = ease::linear(elapsed, duration, 1.0);
 
-    sprite.setColor(sf::Color(255, 255, 255, (sf::Uint8)(255.0 * (1-alpha))));
-    sprite2.setColor(sf::Color(255, 255, 255, (sf::Uint8)(255.0 * alpha)));
+    sprite.setColor(sf::Color(255, 255, 255, (std::uint8_t)(255.0 * (1-alpha))));
+    sprite2.setColor(sf::Color(255, 255, 255, (std::uint8_t)(255.0 * alpha)));
 
     renderer.submit(Immediate(&sprite));
     renderer.submit(Immediate(&sprite2));

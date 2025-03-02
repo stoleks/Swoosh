@@ -46,43 +46,43 @@ public:
     int d = 0;
 
     // left
-    if (direction == direction::left) {
-      r = bottom.getTexture()->getSize().x;
+    if (direction == arg::direction::left) {
+      r = bottom.getTexture ().getSize ().x;
       l = (int)(r - (alpha * (double)r));
       u = 0;
-      d = bottom.getTexture()->getSize().y;
+      d = bottom.getTexture ().getSize ().y;
 
 
-      top.setPosition((float)l, 0);
+      top.setPosition({(float)l, 0.f});
     }
 
     // right
-    if (direction == direction::right) {
-      r = (int)((double)bottom.getTexture()->getSize().x * alpha);
+    if (direction == arg::direction::right) {
+      r = (int)((double)bottom.getTexture ().getSize ().x * alpha);
       l = 0;
       u = 0;
-      d = bottom.getTexture()->getSize().y;
+      d = bottom.getTexture ().getSize ().y;
     }
 
     // up
-    if (direction == direction::up) {
-      r = bottom.getTexture()->getSize().x;
+    if (direction == arg::direction::up) {
+      r = bottom.getTexture ().getSize ().x;
       l = 0;
-      d = bottom.getTexture()->getSize().y;
+      d = bottom.getTexture ().getSize ().y;
       u = (int)((double)d - (alpha * (double)d));
 
-      top.setPosition(0, (float)u);
+      top.setPosition({0.f, (float)u});
     }
 
     // down 
-    if (direction == direction::down) {
-      r = bottom.getTexture()->getSize().x;
+    if (direction == arg::direction::down) {
+      r = bottom.getTexture ().getSize ().x;
       l = 0;
       u = 0;
-      d = (int)((double)bottom.getTexture()->getSize().y * alpha);
+      d = (int)((double)bottom.getTexture ().getSize ().y * alpha);
     }
 
-    top.setTextureRect(sf::IntRect(l, u, r, d));
+    top.setTextureRect(sf::IntRect({l, u}, {r, d}));
 
     renderer.clear();
     renderer.submit(Immediate(&bottom));

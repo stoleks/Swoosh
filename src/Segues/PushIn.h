@@ -45,7 +45,7 @@ public:
     if (direction == arg::direction::up   ) ud = -1;
     if (direction == arg::direction::down ) ud = 1;
 
-    left.setPosition((float)(lr * alpha * left.getTexture()->getSize().x), (float)(ud * alpha * left.getTexture()->getSize().y));
+    left.setPosition({(float)(lr * alpha * left.getTexture ().getSize().x), (float)(ud * alpha * left.getTexture ().getSize().y)});
 
     renderer.clear(this->getNextActivityBGColor());
 
@@ -62,7 +62,7 @@ public:
 
     sf::Sprite right(temp2);
 
-    right.setPosition((float)(-lr * (1.0-alpha) * right.getTexture()->getSize().x), (float)(-ud * (1.0-alpha) * right.getTexture()->getSize().y));
+    right.setPosition({(float)(-lr * (1.0-alpha) * right.getTexture ().getSize().x), (float)(-ud * (1.0-alpha) * right.getTexture ().getSize().y)});
 
     renderer.submit(&left);
     renderer.submit(&right);

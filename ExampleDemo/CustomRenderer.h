@@ -58,7 +58,7 @@ struct Light : sw::RenderSource {
     circle.setPosition({ position.x, position.y });
 
     sf::FloatRect bounds = circle.getLocalBounds();
-    circle.setOrigin(bounds.width/2, bounds.height/2);
+    circle.setOrigin(bounds.size/2.f);
   };
 };
 
@@ -95,11 +95,11 @@ public:
     const unsigned int uy = (unsigned int)view.getSize().y;
     const sf::Vector2u size = sf::Vector2u(ux, uy);
 
-    position.create(size.x, size.y);
-    diffuse.create(size.x, size.y);
-    normal.create(size.x, size.y);
-    esm.create(size.x, size.y);
-    out.create(size.x, size.y);
+    if (!position.resize(size)) {}
+    if (!diffuse.resize(size)) {}
+    if (!normal.resize(size)) {}
+    if (!esm.resize(size)) {}
+    if (!out.resize(size)) {}
 
     meshShader.configure(&diffuse, &normal, &esm);
     positionShader.configure(-100, 100, view, &position);

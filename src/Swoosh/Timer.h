@@ -1,7 +1,10 @@
 #pragma once
-#include <SFML/System.hpp>
+
+#include <SFML/System/Time.hpp>
+
 #include <map>
 #include <vector>
+#include <cstdint>
 #include <functional>
 
 namespace sw {
@@ -16,10 +19,10 @@ namespace sw {
     class Trigger; // forward decl
 
   private:
-    sf::Int32 elapsed{ 0 };                //!< Elapsed time in milliseconds
-    bool paused{ true };                   //!< If true, paused
-    bool reversed{ false };                //!< If true, will count down from `elapsed`
-    std::map<sf::Int32, Trigger> triggers; //!< List of triggers to perform
+    std::int32_t elapsed{ 0 };                //!< Elapsed time in milliseconds
+    bool paused{ true };                      //!< If true, paused
+    bool reversed{ false };                   //!< If true, will count down from `elapsed`
+    std::map<std::int32_t, Trigger> triggers; //!< List of triggers to perform
   public:
     /**
      * @class Trigger
@@ -47,7 +50,7 @@ namespace sw {
         friend class Timer;
 
       private:
-        sf::Int32 duration{}; //!< How long the polling lasts in ms
+        std::int32_t duration{}; //!< How long the polling lasts in ms
         std::function<void(sf::Time)> func; //!< Behavior to execute
 
       public:
@@ -169,7 +172,7 @@ namespace sw {
         auto lastTickElapsed = elapsed;
 
         if (reversed) {
-          elapsed = std::max<sf::Int32>(0, elapsed - span.asMilliseconds());
+          elapsed = std::max<std::int32_t>(0, elapsed - span.asMilliseconds());
         }
         else {
           elapsed += span.asMilliseconds();

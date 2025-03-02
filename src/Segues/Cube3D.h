@@ -228,7 +228,7 @@ public:
       }
     );
 
-    shader.loadFromMemory(this->cube3DShaderProgram, sf::Shader::Fragment);
+    if (!shader.loadFromMemory(this->cube3DShaderProgram, sf::Shader::Type::Fragment)) {}
   }
 
   ~Cube3D() { }

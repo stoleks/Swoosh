@@ -1,5 +1,8 @@
 #pragma once
-#include <SFML/Graphics.hpp>
+
+#include <SFML/System/Time.hpp>
+#include <SFML/Graphics/RenderTexture.hpp>
+
 #include <functional>
 
 namespace sw

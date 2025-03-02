@@ -13,7 +13,7 @@ struct button {
   bool isClicked;
   bool isHovering;
 
-  button() { isClicked = isHovering = false;  }
+  button(sf::Texture& texture) : sprite(texture) { isClicked = isHovering = false;  }
   void update(sf::RenderWindow& window) {
     if (isMouseHovering(*this, window)) {
       isHovering = true;
@@ -33,12 +33,12 @@ struct button {
     }
 
     sprite.setPosition(sf::Vector2f(x, y));
-    sprite.setOrigin(sprite.getGlobalBounds().width / 2.0f, sprite.getGlobalBounds().height / 2.0f);
+    sprite.setOrigin({sprite.getGlobalBounds().size.x / 2.0f, sprite.getGlobalBounds().size.y / 2.0f});
     renderer.submit(Clone(sprite));
 
     sftext.setString(text);
-    sftext.setOrigin(sftext.getGlobalBounds().width / 2.0f, sftext.getGlobalBounds().height / 2.0f);
-    sftext.setPosition(sf::Vector2f(x, y - sftext.getGlobalBounds().height / 2.0f));
+    sftext.setOrigin({sftext.getGlobalBounds().size.x / 2.0f, sftext.getGlobalBounds().size.y / 2.0f});
+    sftext.setPosition(sf::Vector2f(x, y - sftext.getGlobalBounds().size.y / 2.0f));
     renderer.submit(Clone(sftext));
   }
 };
@@ -50,5 +50,5 @@ const bool isMouseHovering(button& btn, sf::RenderWindow& window) {
   sf::Vector2f mouse = window.mapPixelToCoords(mousei);
   sf::FloatRect bounds = sprite.getGlobalBounds();
 
-  return (mouse.x >= bounds.left && mouse.x <= bounds.left + bounds.width && mouse.y >= bounds.top && mouse.y <= bounds.top + bounds.height);
+  return bounds.contains (mouse);
 }
