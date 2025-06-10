@@ -1040,7 +1040,9 @@ namespace sw
           segue->next->onEnd();
           activities.pop(); // top
           activities.pop(); // last
-          delete segue->last, segue->next, segue;
+          delete segue->last;
+          delete segue->next;
+          delete segue;
           segueAction = SegueAction::none;
           last = nullptr;
           continue;

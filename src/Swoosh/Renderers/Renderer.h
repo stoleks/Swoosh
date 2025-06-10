@@ -183,7 +183,7 @@ namespace sw {
     }
 
     ClonedSource(void* memIn, sf::Drawable* dptr, const char* nameIn, DeletePolicy* policy = nullptr) : 
-      name(nameIn), mem(memIn), dptr(dptr), deleter(policy), RenderSource(dptr) {}
+      RenderSource(dptr), name(nameIn), mem(memIn), dptr(dptr), deleter(policy) {}
   };
 
   /**

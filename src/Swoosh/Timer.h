@@ -214,7 +214,7 @@ namespace sw {
                 auto progress = elapsed - startTime;
 
                 // account for overlapping the final tick for "perfect" animation transitions
-                auto missedProgress = lastTickElapsed - (startTime + tasks.duration);
+                // auto missedProgress = lastTickElapsed - (startTime + tasks.duration);
 
                 // Check if to update the function or provide the final tick into the function
                 if (progress <= tasks.duration && progress > 0) {

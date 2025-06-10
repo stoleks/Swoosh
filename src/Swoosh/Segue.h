@@ -82,12 +82,12 @@ namespace sw {
 
     Segue() = delete;
     Segue(sf::Time duration, Activity* last, Activity* next) : 
-      setActivityViewFunc(nullptr), 
-      resetViewFunc(nullptr),
-      duration(duration), 
+      Activity(&next->getController()),
       last(last), 
       next(next), 
-      Activity(&next->getController()) { /* ... */ }
+      duration(duration), 
+      setActivityViewFunc(nullptr), 
+      resetViewFunc(nullptr) { /* ... */ }
 
     virtual ~Segue() { }
   };
