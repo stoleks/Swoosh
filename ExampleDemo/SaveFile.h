@@ -21,7 +21,7 @@ struct SaveFile {
     // create some fake highscores if first time playing
     if (names.empty()) {
       for (int i = 0; i < 10; i++) {
-        for (auto letter : { 0,1,2 }) {
+        for (int j =0; j < 3; j++) {
           outfile << "A";
         }
         
@@ -30,7 +30,7 @@ struct SaveFile {
     }
     else {
       // just update the records
-      for (int i = 0; i < names.size(); i++) {
+      for (uint32_t i = 0; i < names.size(); i++) {
         for (auto letters : { 0,1,2 }) {
           outfile << names[i][letters];
         }

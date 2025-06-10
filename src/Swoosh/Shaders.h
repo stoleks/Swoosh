@@ -591,17 +591,10 @@ namespace sw {
         // page turn
         float angle1 = ease::radians(90.0f);
         float angle2 = ease::radians(4.0f);
-        float angle3 = ease::radians(4.0f);
 
         // length of cone
         float     A1 = -15.0f;
         float     A2 = 0.0f;
-        float     A3 = 0.5f;
-
-        // curl amount
-        float theta1 = 10.5f;
-        float theta2 = 15.0f;
-        float theta3 = 10.01f;
 
         float dt;
         double theta = 90.f;

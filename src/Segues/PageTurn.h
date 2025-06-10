@@ -26,10 +26,9 @@ private:
       return 10;
     case quality::reduced:
       return 50;
+    default: // quality::mobile
+      return 100;
     }
-    
-    // quality::mobile
-    return 100;
   }
 
 public:

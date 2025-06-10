@@ -172,8 +172,6 @@ public:
   }
 
   void spawnEnemy() {
-    sf::RenderWindow& window = getController().getWindow();
-
     particle enemy;
     enemy.sprite = std::make_unique <sf::Sprite> (*enemyTexture);
     sw::setOrigin(*enemy.sprite, 0.5, 0.5);
@@ -237,18 +235,18 @@ public:
       m.sprite->setPosition(m.pos);
       m.sprite->setRotation(sf::degrees (m.pos.x));
 
-      const sf::Vector2u window = C.getVirtualWindowSize();
-      if (m.pos.x > window.x + 100) {
+      const sf::Vector2u screenSize = C.getVirtualWindowSize();
+      if (m.pos.x > screenSize.x + 100) {
         m.pos.x = -50.0f;
       } else if (m.pos.x < -100) {
-        m.pos.x = (float)window.x + 50.f;
+        m.pos.x = (float)screenSize.x + 50.f;
       }
 
-      if (m.pos.y > (float)window.y + 100) {
+      if (m.pos.y > (float)screenSize.y + 100) {
         m.pos.y = -50.0f;
       }
       else if (m.pos.y < -100) {
-        m.pos.y = (float)window.y + 50.0f;
+        m.pos.y = (float)screenSize.y + 50.0f;
       }
     }
 

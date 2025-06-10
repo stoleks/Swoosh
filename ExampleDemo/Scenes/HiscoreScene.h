@@ -130,8 +130,6 @@ public:
   }
 
   void onDraw(sw::IRenderer& renderer) override {
-    sf::RenderWindow& window = getController().getWindow();
-
     text.setFillColor(sf::Color::Yellow);
     text.setPosition(sf::Vector2f(screenMid, 100));
     text.setString("Hi Scores");
@@ -140,7 +138,7 @@ public:
 
     text.setFillColor(sf::Color::White);
 
-    for (int i = 0; i < saveFile.names.size(); i++) {
+    for (uint32_t i = 0; i < saveFile.names.size(); i++) {
       std::string name = saveFile.names[i];
       int score = saveFile.scores[i];
 

@@ -147,8 +147,6 @@ public:
   }
 
   void onDraw(sw::IRenderer& renderer) override {
-    sf::RenderWindow& window = getController().getWindow();
-
     renderer.clear(sf::Color::Black);
     renderer.submit(sfml.get ());
 

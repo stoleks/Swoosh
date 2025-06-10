@@ -51,7 +51,6 @@ namespace sw {
       memcpy(input, glsl, size);
       input[size - 1] = '\0';
 
-      rsize_t strmax = sizeof input;
       char* next_token{};
 
       char* line = strtok_s(input, delim, &next_token);

@@ -244,7 +244,7 @@ public:
     size_t len = strlen(GAME_TITLE);
     double frequency = sw::ease::pi * 2.0 / len;
     double dt = timer.getElapsed().asSeconds();
-    for (int i = 0; i < len; i++) {
+    for (size_t i = 0; i < len; i++) {
       menuText.setFillColor(sf::Color::White);
       menuText.setString(GAME_TITLE[i]);
       sw::setOrigin(menuText, 0.5, 0.5); // origin is in the center of the letter

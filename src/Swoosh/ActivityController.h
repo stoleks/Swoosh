@@ -1097,7 +1097,6 @@ namespace sw
 
       // get all original view and viewport settings
       auto& view = window.getView();
-      auto viewSize = view.getSize();
       auto viewportIntRect = window.getViewport(view);
 
       // calculate the view based on any viewport adjustments
